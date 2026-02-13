@@ -3,14 +3,16 @@
 Simple Data Generator (SDG) - Python Edition
 Migrated from Java (iamhowardtheduck/SDGv2)
 Generates configurable random data and indexes it into Elasticsearch.
+
+Field types match the official supported_fields.md from the original Java app.
 """
 
 import argparse
+import hashlib
 import ipaddress
-import json
 import logging
+import math
 import random
-import re
 import string
 import sys
 import threading
@@ -21,7 +23,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from elasticsearch import Elasticsearch, helpers
-from elasticsearch.exceptions import ConnectionError, NotFoundError
+from elasticsearch.exceptions import ConnectionError
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
@@ -34,7 +36,7 @@ logging.basicConfig(
 log = logging.getLogger("sdg")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# US State / City data (matches Java implementation)
+# Static data tables
 # ─────────────────────────────────────────────────────────────────────────────
 US_STATES = [
     "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
@@ -62,16 +64,11 @@ US_CITIES = [
     "Honolulu", "Arlington", "Wichita", "Cleveland", "Bakersfield",
 ]
 
-COUNTRIES = [
-    "United States", "United Kingdom", "Canada", "Australia", "Germany",
-    "France", "Japan", "China", "India", "Brazil", "Mexico", "Italy",
-    "Spain", "South Korea", "Netherlands", "Russia", "Sweden", "Norway",
-    "Denmark", "Finland", "Switzerland", "Austria", "Belgium", "Poland",
-    "Czech Republic", "Portugal", "Greece", "Turkey", "Israel", "Argentina",
-    "Colombia", "Chile", "Peru", "Venezuela", "South Africa", "Nigeria",
-    "Egypt", "Kenya", "Ghana", "Morocco", "Singapore", "Thailand",
-    "Indonesia", "Malaysia", "Philippines", "Vietnam", "New Zealand",
-    "Ireland", "Scotland", "Wales",
+STREET_NAMES = [
+    "Main St", "Oak Ave", "Maple Dr", "Cedar Blvd", "Elm St",
+    "Washington Blvd", "Park Ave", "Lake Dr", "Hill Rd", "River Rd",
+    "Forest Ln", "Sunset Blvd", "Valley Rd", "Spring St", "Meadow Ln",
+    "Lincoln Ave", "Highland Dr", "Willow Way", "Pine St", "Ridge Rd",
 ]
 
 FIRST_NAMES = [
@@ -96,44 +93,104 @@ LAST_NAMES = [
     "Carter", "Roberts",
 ]
 
-HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
-
-HTTP_STATUS_CODES = [
-    200, 200, 200, 200, 200,   # weight 200 heavily
-    201, 204, 301, 302, 304,
-    400, 401, 403, 404, 405,
-    500, 502, 503,
+GROUPS = [
+    "Engineering", "Sales", "Marketing", "Finance", "HR", "Legal",
+    "Operations", "Product", "Design", "Support", "Security", "IT",
+    "Research", "Executive", "Procurement", "Logistics", "Data Science",
+    "DevOps", "QA", "Business Development",
 ]
 
-LOG_LEVELS = ["DEBUG", "INFO", "INFO", "INFO", "WARN", "ERROR", "FATAL"]
+TEAM_NAMES = [
+    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot",
+    "Phoenix", "Vanguard", "Titan", "Nexus", "Apex", "Zenith",
+    "Hydra", "Atlas", "Orion", "Polaris", "Catalyst", "Horizon",
+    "Pinnacle", "Velocity",
+]
 
-MIME_TYPES = [
-    "text/html", "application/json", "application/xml", "text/plain",
-    "image/jpeg", "image/png", "application/pdf", "text/css",
-    "application/javascript", "application/octet-stream",
+# Ancient gods — matches Java hostname implementation
+HOSTNAMES = [
+    "zeus", "hera", "poseidon", "demeter", "athena", "apollo",
+    "artemis", "ares", "aphrodite", "hephaestus", "hermes", "dionysus",
+    "odin", "thor", "loki", "freya", "tyr", "baldur", "heimdall", "frigg",
+    "ra", "osiris", "isis", "horus", "anubis", "thoth", "set", "nut",
+    "brahma", "vishnu", "shiva", "indra", "agni", "varuna", "krishna",
+]
+
+APP_NAMES = [
+    "nginx", "apache", "tomcat", "node", "django", "flask", "rails",
+    "spring-boot", "express", "fastapi", "haproxy", "varnish",
+    "elasticsearch", "kibana", "logstash", "filebeat", "redis", "kafka",
+    "rabbitmq", "postgres", "mysql", "mongodb", "cassandra", "consul",
+    "vault", "prometheus", "grafana", "jenkins", "gitlab-ci", "airflow",
+]
+
+PRODUCT_NAMES = [
+    "Widget Pro", "DataSync", "CloudVault", "NetShield", "FlowTracker",
+    "LogMaster", "SecureKey", "MetricsPulse", "StreamLine", "CacheBoost",
+    "QueryOptimizer", "EventBridge", "TokenGate", "AuditTrail", "PipeRunner",
+    "AlertNow", "SnapIndex", "ReplicaSync", "JobQueue", "PolicyEngine",
+]
+
+OCCUPATIONS = [
+    "Software Engineer", "Data Scientist", "DevOps Engineer", "Product Manager",
+    "UX Designer", "Security Analyst", "Network Engineer", "Database Administrator",
+    "Systems Architect", "QA Engineer", "Technical Writer", "Scrum Master",
+    "Business Analyst", "Cloud Architect", "ML Engineer", "Site Reliability Engineer",
+    "IT Manager", "Solutions Architect", "Frontend Developer", "Backend Developer",
+]
+
+GOT_CHARACTERS = [
+    "Jon Snow", "Daenerys Targaryen", "Tyrion Lannister", "Cersei Lannister",
+    "Jaime Lannister", "Arya Stark", "Sansa Stark", "Bran Stark",
+    "Ned Stark", "Robert Baratheon", "Joffrey Baratheon", "Stannis Baratheon",
+    "Melisandre", "Davos Seaworth", "Samwell Tarly", "Brienne of Tarth",
+    "Sandor Clegane", "Gregor Clegane", "Petyr Baelish", "Varys",
+    "Theon Greyjoy", "Yara Greyjoy", "Margaery Tyrell", "Olenna Tyrell",
+    "Oberyn Martell", "Missandei", "Grey Worm", "Jorah Mormont",
+]
+
+CN_FACTS = [
+    "Chuck Norris can divide by zero.",
+    "Chuck Norris counted to infinity. Twice.",
+    "Chuck Norris can slam a revolving door.",
+    "Chuck Norris doesn't push the elevator button, the elevator button pushes itself.",
+    "Chuck Norris's keyboard has no Ctrl key because Chuck Norris is always in control.",
+    "Chuck Norris doesn't need garbage collection because he doesn't call, he collects.",
+    "Chuck Norris can write infinite loops and exit them.",
+    "Chuck Norris's programs don't have bugs, they have features.",
+    "Chuck Norris can make a class that is both abstract and final.",
+    "Chuck Norris solved the halting problem. Twice.",
+]
+
+TIMEZONES = [
+    "UTC", "America/New_York", "America/Chicago", "America/Denver",
+    "America/Los_Angeles", "America/Anchorage", "Pacific/Honolulu",
+    "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+    "Asia/Tokyo", "Asia/Shanghai", "Asia/Kolkata", "Asia/Dubai",
+    "Australia/Sydney", "Pacific/Auckland", "America/Sao_Paulo",
+    "America/Toronto", "America/Vancouver",
+]
+
+DOMAINS = [
+    "example.com", "acme.org", "techcorp.io", "globalnet.co",
+    "infosys.net", "datahub.io", "cloudbase.tech", "webworks.com",
+    "apexdata.net", "streamline.co", "nexuslab.org", "pivotal.io",
+]
+
+PATHS = [
+    "/var/log/app.log", "/etc/nginx/nginx.conf", "/usr/local/bin/app",
+    "/home/user/documents/report.pdf", "/tmp/session_cache",
+    "/opt/services/config.yaml", "/data/exports/output.csv",
+    "/var/lib/elasticsearch/data", "/etc/ssl/certs/ca.pem",
+    "/srv/www/html/index.html", "/proc/sys/kernel/hostname",
+    "/run/app/app.pid",
 ]
 
 URL_PATHS = [
     "/", "/index.html", "/api/v1/users", "/api/v1/orders", "/api/v2/products",
     "/search", "/login", "/logout", "/dashboard", "/admin",
     "/static/css/main.css", "/static/js/app.js", "/favicon.ico",
-    "/api/health", "/api/metrics", "/profile", "/settings",
-]
-
-OPERATING_SYSTEMS = [
-    "Windows 10", "Windows 11", "macOS 13", "macOS 14",
-    "Ubuntu 22.04", "Ubuntu 24.04", "CentOS 7", "RHEL 9",
-    "Android 13", "Android 14", "iOS 17", "iOS 16",
-]
-
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Firefox/121.0",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-    "Mozilla/5.0 (Android 13; Mobile; rv:121.0) Gecko/121.0 Firefox/121.0",
-    "python-requests/2.31.0",
-    "curl/8.4.0",
+    "/api/health", "/api/metrics",
 ]
 
 WORDS = [
@@ -141,19 +198,14 @@ WORDS = [
     "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore",
     "et", "dolore", "magna", "aliqua", "enim", "ad", "minim", "veniam",
     "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-    "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure",
-    "reprehenderit", "voluptate", "velit", "esse", "cillum", "fugiat",
-    "nulla", "pariatur", "excepteur", "sint", "occaecat", "cupidatat",
-    "proident", "sunt", "culpa", "qui", "officia", "deserunt", "mollit",
 ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Field value generators
+# Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_range(range_str: Optional[str], default_min=0, default_max=1_000_000):
-    """Parse 'min,max' range string into (min, max) tuple."""
     if not range_str:
         return default_min, default_max
     parts = str(range_str).split(",")
@@ -162,327 +214,300 @@ def _parse_range(range_str: Optional[str], default_min=0, default_max=1_000_000)
     return default_min, default_max
 
 
+def _parse_custom_list(field: Dict) -> List[str]:
+    raw = field.get("custom_list", "")
+    if isinstance(raw, list):
+        return [str(v) for v in raw]
+    return [v.strip() for v in str(raw).split(",") if v.strip()]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Official field generators  (supported_fields.md)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Primitives
 def gen_int(field: Dict) -> int:
     lo, hi = _parse_range(field.get("range"), 0, 1_000_000)
     return random.randint(int(lo), int(hi))
-
-
-def gen_long(field: Dict) -> int:
-    lo, hi = _parse_range(field.get("range"), 0, 9_999_999_999)
-    return random.randint(int(lo), int(hi))
-
 
 def gen_float(field: Dict) -> float:
     lo, hi = _parse_range(field.get("range"), 0.0, 1_000_000.0)
     return round(random.uniform(lo, hi), 2)
 
-
-def gen_double(field: Dict) -> float:
-    lo, hi = _parse_range(field.get("range"), 0.0, 1_000_000.0)
-    return round(random.uniform(lo, hi), 6)
-
-
-def gen_bool(_field: Dict) -> bool:
+def gen_boolean(_field: Dict) -> bool:
     return random.choice([True, False])
 
-
-def gen_string(field: Dict) -> str:
-    length = int(field.get("length", 10))
-    chars = field.get("chars", string.ascii_letters + string.digits)
-    return "".join(random.choices(chars, k=length))
-
-
-def gen_words(field: Dict) -> str:
-    count = int(field.get("count", random.randint(3, 15)))
-    return " ".join(random.choices(WORDS, k=count))
-
-
-def gen_state(_field: Dict) -> str:
-    return random.choice(US_STATES)
-
-
-def gen_city(_field: Dict) -> str:
-    return random.choice(US_CITIES)
-
-
-def gen_country(_field: Dict) -> str:
-    return random.choice(COUNTRIES)
-
+# Names
+def gen_full_name(_field: Dict) -> str:
+    return f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
 
 def gen_first_name(_field: Dict) -> str:
     return random.choice(FIRST_NAMES)
 
-
 def gen_last_name(_field: Dict) -> str:
     return random.choice(LAST_NAMES)
 
+def gen_group(_field: Dict) -> str:
+    return random.choice(GROUPS)
 
-def gen_full_name(_field: Dict) -> str:
-    return f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+def gen_team_name(_field: Dict) -> str:
+    return random.choice(TEAM_NAMES)
 
+# Addresses
+def gen_full_address(_field: Dict) -> str:
+    num    = random.randint(1, 9999)
+    street = random.choice(STREET_NAMES)
+    city   = random.choice(US_CITIES)
+    state  = random.choice(US_STATES)
+    zc     = f"{random.randint(10000, 99999):05d}"
+    return f"{num} {street}, {city}, {state} {zc}"
 
-def gen_email(_field: Dict) -> str:
-    first = random.choice(FIRST_NAMES).lower()
-    last = random.choice(LAST_NAMES).lower()
-    domains = ["gmail.com", "yahoo.com", "hotmail.com", "company.com",
-               "example.org", "outlook.com", "proton.me"]
-    return f"{first}.{last}{random.randint(1, 999)}@{random.choice(domains)}"
+def gen_street_address(_field: Dict) -> str:
+    return f"{random.randint(1, 9999)} {random.choice(STREET_NAMES)}"
 
+def gen_city(_field: Dict) -> str:
+    return random.choice(US_CITIES)
 
-def gen_phone(_field: Dict) -> str:
+def gen_state(_field: Dict) -> str:
+    return random.choice(US_STATES)
+
+def gen_zipcode(_field: Dict) -> str:
+    return f"{random.randint(10000, 99999):05d}"
+
+# Special numbers
+def gen_credit_card_number(_field: Dict) -> str:
+    """Luhn-valid 16-digit Visa test card number."""
+    prefix = [int(d) for d in random.choice(["4111", "4222", "4532", "4716"])]
+    digits = prefix[:]
+    while len(digits) < 15:
+        digits.append(random.randint(0, 9))
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 0:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    digits.append((10 - (total % 10)) % 10)
+    return "".join(str(d) for d in digits)
+
+def gen_phone_number(_field: Dict) -> str:
     return (f"+1-{random.randint(200,999):03d}-"
             f"{random.randint(100,999):03d}-"
             f"{random.randint(1000,9999):04d}")
-
-
-def gen_ip(_field: Dict) -> str:
-    # avoid reserved ranges for realism
-    while True:
-        parts = [random.randint(1, 254) for _ in range(4)]
-        if parts[0] not in (10, 127, 172, 192):
-            return ".".join(str(p) for p in parts)
-
-
-def gen_ipv6(_field: Dict) -> str:
-    return str(ipaddress.IPv6Address(random.randint(0, 2**128 - 1)))
-
-
-def gen_mac(_field: Dict) -> str:
-    return ":".join(f"{random.randint(0, 255):02x}" for _ in range(6))
-
-
-def gen_uuid(_field: Dict) -> str:
-    return str(uuid.uuid4())
-
-
-def gen_timestamp(field: Dict) -> str:
-    """Generate ISO-8601 timestamp. Supports 'range' in minutes back from now."""
-    lo, hi = _parse_range(field.get("range"), 0, 60 * 24 * 7)  # default: last week
-    minutes_back = random.uniform(lo, hi)
-    dt = datetime.now(timezone.utc) - timedelta(minutes=minutes_back)
-    return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-
-
-def gen_date(field: Dict) -> str:
-    lo, hi = _parse_range(field.get("range"), 0, 365 * 2)  # default: last 2 years
-    days_back = random.randint(int(lo), int(hi))
-    dt = datetime.now(timezone.utc) - timedelta(days=days_back)
-    return dt.strftime("%Y-%m-%d")
-
-
-def gen_time(_field: Dict) -> str:
-    h = random.randint(0, 23)
-    m = random.randint(0, 59)
-    s = random.randint(0, 59)
-    return f"{h:02d}:{m:02d}:{s:02d}"
-
-
-def gen_url(_field: Dict) -> str:
-    schemes = ["http", "https"]
-    tlds = ["com", "org", "net", "io", "co"]
-    words = random.choices(WORDS, k=2)
-    path = random.choice(URL_PATHS)
-    return f"{random.choice(schemes)}://{''.join(words)}.{random.choice(tlds)}{path}"
-
-
-def gen_http_method(_field: Dict) -> str:
-    return random.choice(HTTP_METHODS)
-
-
-def gen_http_status(_field: Dict) -> int:
-    return random.choice(HTTP_STATUS_CODES)
-
-
-def gen_log_level(_field: Dict) -> str:
-    return random.choice(LOG_LEVELS)
-
-
-def gen_user_agent(_field: Dict) -> str:
-    return random.choice(USER_AGENTS)
-
-
-def gen_mime_type(_field: Dict) -> str:
-    return random.choice(MIME_TYPES)
-
-
-def gen_os(_field: Dict) -> str:
-    return random.choice(OPERATING_SYSTEMS)
-
 
 def gen_ssn(_field: Dict) -> str:
     return (f"{random.randint(100,999):03d}-"
             f"{random.randint(10,99):02d}-"
             f"{random.randint(1000,9999):04d}")
 
+def gen_uuid(_field: Dict) -> str:
+    return str(uuid.uuid4())
 
-def gen_zip(_field: Dict) -> str:
-    return f"{random.randint(10000, 99999):05d}"
+def gen_product_name(_field: Dict) -> str:
+    return random.choice(PRODUCT_NAMES)
 
+def gen_hash(_field: Dict) -> str:
+    return hashlib.md5(str(random.random()).encode()).hexdigest()
+
+# Random from lists
+def gen_random_string_from_list(field: Dict) -> str:
+    items = _parse_custom_list(field)
+    return random.choice(items) if items else ""
+
+def gen_random_integer_from_list(field: Dict) -> int:
+    items = _parse_custom_list(field)
+    return int(random.choice(items)) if items else 0
+
+def gen_random_float_from_list(field: Dict) -> float:
+    items = _parse_custom_list(field)
+    return float(random.choice(items)) if items else 0.0
+
+def gen_random_long_from_list(field: Dict) -> int:
+    items = _parse_custom_list(field)
+    return int(random.choice(items)) if items else 0
+
+# Misc
+def gen_ipv4(_field: Dict) -> str:
+    while True:
+        parts = [random.randint(1, 254) for _ in range(4)]
+        if parts[0] not in (10, 127, 172, 192):
+            return ".".join(str(p) for p in parts)
+
+def gen_random_cn_fact(_field: Dict) -> str:
+    return random.choice(CN_FACTS)
+
+def gen_random_got_character(_field: Dict) -> str:
+    return random.choice(GOT_CHARACTERS)
+
+def gen_random_occupation(_field: Dict) -> str:
+    return random.choice(OCCUPATIONS)
+
+def gen_empty(_field: Dict) -> str:
+    return ""
+
+def gen_path(_field: Dict) -> str:
+    return random.choice(PATHS)
+
+def gen_hostname(_field: Dict) -> str:
+    suffix = random.choice(["",
+                             f"-{random.randint(1, 99):02d}",
+                             f".{random.choice(['internal', 'local', 'corp'])}"])
+    return random.choice(HOSTNAMES) + suffix
+
+def gen_appname(_field: Dict) -> str:
+    return random.choice(APP_NAMES)
+
+def gen_url(_field: Dict) -> str:
+    scheme = random.choice(["http", "https"])
+    tld    = random.choice(["com", "org", "net", "io", "co"])
+    name   = "".join(random.choices(WORDS, k=2))
+    path   = random.choice(URL_PATHS)
+    return f"{scheme}://{name}.{tld}{path}"
+
+def gen_mac_address(_field: Dict) -> str:
+    return ":".join(f"{random.randint(0,255):02x}" for _ in range(6))
+
+def gen_email(_field: Dict) -> str:
+    first   = random.choice(FIRST_NAMES).lower()
+    last    = random.choice(LAST_NAMES).lower()
+    domains = ["gmail.com", "yahoo.com", "hotmail.com",
+               "company.com", "example.org", "outlook.com"]
+    return f"{first}.{last}{random.randint(1,999)}@{random.choice(domains)}"
+
+def gen_domain(_field: Dict) -> str:
+    return random.choice(DOMAINS)
+
+def gen_date(field: Dict) -> str:
+    lo, hi    = _parse_range(field.get("range"), 0, 365 * 2)
+    days_back = random.randint(int(lo), int(hi))
+    dt        = datetime.now() - timedelta(days=days_back)
+    return dt.strftime("%Y-%m-%d")
+
+def gen_timezone(_field: Dict) -> str:
+    return random.choice(TIMEZONES)
+
+def gen_constant(field: Dict) -> Any:
+    return field.get("value", "")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Extra types (not in official doc but useful; kept as aliases)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def gen_long(field: Dict) -> int:
+    lo, hi = _parse_range(field.get("range"), 0, 9_999_999_999)
+    return random.randint(int(lo), int(hi))
+
+def gen_double(field: Dict) -> float:
+    lo, hi = _parse_range(field.get("range"), 0.0, 1_000_000.0)
+    return round(random.uniform(lo, hi), 6)
+
+def gen_timestamp(field: Dict) -> str:
+    """ISO-8601 UTC timestamp. range = minutes back from now."""
+    lo, hi       = _parse_range(field.get("range"), 0, 60 * 24 * 7)
+    minutes_back = random.uniform(lo, hi)
+    dt           = datetime.now(timezone.utc) - timedelta(minutes=minutes_back)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+def gen_ipv6(_field: Dict) -> str:
+    return str(ipaddress.IPv6Address(random.randint(0, 2**128 - 1)))
 
 def gen_geo_point(_field: Dict) -> Dict:
-    lat = round(random.uniform(-90.0, 90.0), 6)
-    lon = round(random.uniform(-180.0, 180.0), 6)
-    return {"lat": lat, "lon": lon}
-
-
-def gen_object(field: Dict) -> Dict:
-    """Recursively generate an object from nested 'fields' definition."""
-    result = {}
-    for sub_field in field.get("fields", []):
-        result[sub_field["name"]] = generate_value(sub_field)
-    return result
-
-
-def gen_array(field: Dict) -> List:
-    """Generate an array of values. Uses 'itemType' and optional 'count'."""
-    count = int(field.get("count", random.randint(1, 5)))
-    item_field = {"name": "_item", "type": field.get("itemType", "string")}
-    item_field.update({k: v for k, v in field.items()
-                       if k not in ("name", "type", "count", "itemType")})
-    return [generate_value(item_field) for _ in range(count)]
-
-
-def gen_enum(field: Dict) -> Any:
-    """Pick a random value from a 'values' list."""
-    values = field.get("values", ["a", "b", "c"])
-    return random.choice(values)
-
-
-def gen_weighted_enum(field: Dict) -> Any:
-    """Pick a value based on weights. 'values' list of {value, weight} dicts."""
-    items = field.get("values", [{"value": "a", "weight": 1}])
-    population = [i["value"] for i in items]
-    weights = [i.get("weight", 1) for i in items]
-    return random.choices(population, weights=weights, k=1)[0]
-
+    return {
+        "lat": round(random.uniform(-90.0, 90.0), 6),
+        "lon": round(random.uniform(-180.0, 180.0), 6),
+    }
 
 def gen_sequence(field: Dict, state: Dict) -> int:
-    """Auto-incrementing sequence. State is per-workload-thread."""
-    key = field["name"]
+    key   = field["name"]
     start = int(field.get("start", 1))
-    step = int(field.get("step", 1))
+    step  = int(field.get("step", 1))
     if key not in state:
         state[key] = start
-    val = state[key]
+    val         = state[key]
     state[key] += step
     return val
 
 
-def gen_constant(field: Dict) -> Any:
-    """Always return the same constant value."""
-    return field.get("value", "")
-
-
-def gen_correlation_id(_field: Dict) -> str:
-    return f"corr-{uuid.uuid4().hex[:12]}"
-
-
-def gen_hostname(_field: Dict) -> str:
-    parts = random.choices(WORDS, k=2)
-    domains = ["internal", "local", "corp", "example.com"]
-    return f"{parts[0]}-{parts[1]}.{random.choice(domains)}"
-
-
-def gen_port(_field: Dict) -> int:
-    return random.choice([80, 443, 8080, 8443, 3306, 5432, 6379, 27017,
-                          9200, 9243, 22, 21, 25, 53, 123, 3389,
-                          random.randint(1024, 65535)])
-
-
-def gen_bytes_field(field: Dict) -> int:
-    lo, hi = _parse_range(field.get("range"), 100, 10_000_000)
-    return random.randint(int(lo), int(hi))
-
-
-def gen_duration_ms(field: Dict) -> int:
-    lo, hi = _parse_range(field.get("range"), 1, 30_000)
-    return random.randint(int(lo), int(hi))
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Dispatcher
+# Official names from supported_fields.md appear first.
+# Aliases / extras follow so existing configs keep working.
 # ─────────────────────────────────────────────────────────────────────────────
 
-GENERATORS = {
-    "int":           gen_int,
-    "integer":       gen_int,
-    "long":          gen_long,
-    "float":         gen_float,
-    "double":        gen_double,
-    "bool":          gen_bool,
-    "boolean":       gen_bool,
-    "string":        gen_string,
-    "word":          gen_words,
-    "words":         gen_words,
-    "text":          gen_words,
-    "state":         gen_state,
-    "city":          gen_city,
-    "country":       gen_country,
-    "firstName":     gen_first_name,
-    "first_name":    gen_first_name,
-    "lastName":      gen_last_name,
-    "last_name":     gen_last_name,
-    "fullName":      gen_full_name,
-    "full_name":     gen_full_name,
-    "name":          gen_full_name,
-    "email":         gen_email,
-    "phone":         gen_phone,
-    "phoneNumber":   gen_phone,
-    "ip":            gen_ip,
-    "ipv4":          gen_ip,
-    "ipv6":          gen_ipv6,
-    "mac":           gen_mac,
-    "macAddress":    gen_mac,
-    "uuid":          gen_uuid,
-    "guid":          gen_uuid,
-    "timestamp":     gen_timestamp,
-    "date":          gen_date,
-    "time":          gen_time,
-    "url":           gen_url,
-    "uri":           gen_url,
-    "httpMethod":    gen_http_method,
-    "http_method":   gen_http_method,
-    "httpStatus":    gen_http_status,
-    "http_status":   gen_http_status,
-    "logLevel":      gen_log_level,
-    "log_level":     gen_log_level,
-    "userAgent":     gen_user_agent,
-    "user_agent":    gen_user_agent,
-    "mimeType":      gen_mime_type,
-    "mime_type":     gen_mime_type,
-    "os":            gen_os,
-    "operatingSystem": gen_os,
-    "ssn":           gen_ssn,
-    "zip":           gen_zip,
-    "zipCode":       gen_zip,
-    "zip_code":      gen_zip,
-    "geo_point":     gen_geo_point,
-    "geoPoint":      gen_geo_point,
-    "location":      gen_geo_point,
-    "object":        gen_object,
-    "nested":        gen_object,
-    "array":         gen_array,
-    "list":          gen_array,
-    "enum":          gen_enum,
-    "weightedEnum":  gen_weighted_enum,
-    "weighted_enum": gen_weighted_enum,
-    "constant":      gen_constant,
-    "static":        gen_constant,
-    "correlationId": gen_correlation_id,
-    "correlation_id": gen_correlation_id,
-    "hostname":      gen_hostname,
-    "host":          gen_hostname,
-    "port":          gen_port,
-    "bytes":         gen_bytes_field,
-    "duration":      gen_duration_ms,
-    "duration_ms":   gen_duration_ms,
+GENERATORS: Dict[str, Any] = {
+    # ── Official types (supported_fields.md) ──────────────────────────────
+    "int":                      gen_int,
+    "float":                    gen_float,
+    "boolean":                  gen_boolean,
+    "full_name":                gen_full_name,
+    "first_name":               gen_first_name,
+    "last_name":                gen_last_name,
+    "group":                    gen_group,
+    "team_name":                gen_team_name,
+    "full_address":             gen_full_address,
+    "street_address":           gen_street_address,
+    "city":                     gen_city,
+    "state":                    gen_state,
+    "zipcode":                  gen_zipcode,
+    "credit_card_number":       gen_credit_card_number,
+    "phone_number":             gen_phone_number,
+    "ssn":                      gen_ssn,
+    "uuid":                     gen_uuid,
+    "product_name":             gen_product_name,
+    "hash":                     gen_hash,
+    "random_string_from_list":  gen_random_string_from_list,
+    "random_integer_from_list": gen_random_integer_from_list,
+    "random_float_from_list":   gen_random_float_from_list,
+    "random_long_from_list":    gen_random_long_from_list,
+    "ipv4":                     gen_ipv4,
+    "random_cn_fact":           gen_random_cn_fact,
+    "random_got_character":     gen_random_got_character,
+    "random_occupation":        gen_random_occupation,
+    "empty":                    gen_empty,
+    "path":                     gen_path,
+    "hostname":                 gen_hostname,
+    "appname":                  gen_appname,
+    "url":                      gen_url,
+    "mac_address":              gen_mac_address,
+    "email":                    gen_email,
+    "domain":                   gen_domain,
+    "date":                     gen_date,
+    "timezone":                 gen_timezone,
+
+    # ── Aliases / extras ──────────────────────────────────────────────────
+    "integer":                  gen_int,
+    "long":                     gen_long,
+    "double":                   gen_double,
+    "bool":                     gen_boolean,
+    "timestamp":                gen_timestamp,
+    "ip":                       gen_ipv4,
+    "ipv6":                     gen_ipv6,
+    "mac":                      gen_mac_address,
+    "guid":                     gen_uuid,
+    "phone":                    gen_phone_number,
+    "zip":                      gen_zipcode,
+    "zip_code":                 gen_zipcode,
+    "geo_point":                gen_geo_point,
+    "geoPoint":                 gen_geo_point,
+    "location":                 gen_geo_point,
+    "firstName":                gen_first_name,
+    "lastName":                 gen_last_name,
+    "fullName":                 gen_full_name,
+    "name":                     gen_full_name,
+    "host":                     gen_hostname,
+    "constant":                 gen_constant,
+    "static":                   gen_constant,
 }
 
 
 def generate_value(field: Dict, state: Optional[Dict] = None) -> Any:
-    """Generate a single field value based on its type definition."""
-    field_type = field.get("type", "string")
+    # Constants: 'value' key present, no 'type' key (as per supported_fields.md)
+    if "value" in field and "type" not in field:
+        return field["value"]
 
+    field_type = field.get("type", "")
     if field_type == "sequence":
         if state is None:
             state = {}
@@ -490,52 +515,51 @@ def generate_value(field: Dict, state: Optional[Dict] = None) -> Any:
 
     generator = GENERATORS.get(field_type)
     if generator is None:
-        log.warning("Unknown field type '%s' for field '%s', using string",
+        log.warning("Unknown field type '%s' for field '%s' — returning empty string",
                     field_type, field.get("name", "?"))
-        return gen_string(field)
+        return ""
 
     return generator(field)
 
 
 def build_document(fields: List[Dict], seq_state: Dict) -> Dict:
-    """Build a full document dict from a list of field definitions."""
-    doc = {}
+    doc: Dict = {}
     for field in fields:
-        key = field["name"]
-        # Support nested dot-notation keys  (e.g. "host.ip")
+        key   = field["name"]
+        value = generate_value(field, seq_state)
+        # Dot-notation → nested dict  e.g. "name.first" → {"name": {"first": ...}}
         if "." in key:
-            parts = key.split(".")
+            parts     = key.split(".")
             container = doc
             for part in parts[:-1]:
                 container = container.setdefault(part, {})
-            container[parts[-1]] = generate_value(field, seq_state)
+            container[parts[-1]] = value
         else:
-            doc[key] = generate_value(field, seq_state)
+            doc[key] = value
     return doc
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Peak-time sine-wave multiplier  (matches Java peakTime logic)
+# Peak-time pacing  (uses local host time, matching the Java app)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _peak_multiplier(peak_time_str: Optional[str]) -> float:
     """
-    Returns a sleep multiplier (0.5 – 2.0) based on distance from peak time.
-    Near peak → multiplier ~0.5 (faster). Far from peak → multiplier ~2.0.
+    Sine-wave sleep multiplier based on distance from peakTime.
+    Near peak → ~0.5 (faster).  Far from peak → ~2.0 (slower).
+    Uses local host time — identical to the Java implementation.
     """
     if not peak_time_str:
         return 1.0
     try:
-        import math
-        peak_h, peak_m, peak_s = map(int, peak_time_str.split(":"))
-        now = datetime.now()
-        peak_seconds = peak_h * 3600 + peak_m * 60 + peak_s
-        now_seconds = now.hour * 3600 + now.minute * 60 + now.second
-        diff = abs(now_seconds - peak_seconds)
-        diff = min(diff, 86400 - diff)          # wrap around midnight
-        fraction = diff / 43200.0               # 0 at peak, 1 at anti-peak
-        multiplier = 0.5 + 1.5 * math.sin(fraction * math.pi / 2) ** 2
-        return multiplier
+        peak_h, peak_m, peak_s = map(int, str(peak_time_str).split(":"))
+        now          = datetime.now()
+        peak_sec     = peak_h * 3600 + peak_m * 60 + peak_s
+        now_sec      = now.hour * 3600 + now.minute * 60 + now.second
+        diff         = abs(now_sec - peak_sec)
+        diff         = min(diff, 86400 - diff)
+        fraction     = diff / 43200.0
+        return 0.5 + 1.5 * math.sin(fraction * math.pi / 2) ** 2
     except Exception:
         return 1.0
 
@@ -545,66 +569,61 @@ def _peak_multiplier(peak_time_str: Optional[str]) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_es_client(cfg: Dict) -> Elasticsearch:
-    """Build an Elasticsearch client from the YAML config."""
-    scheme = cfg.get("elasticsearchScheme", "https")
-    host   = cfg.get("elasticsearchHost", "localhost")
-    port   = int(cfg.get("elasticsearchPort", 9200))
-    user   = cfg.get("elasticsearchUser", "elastic")
+    scheme   = cfg.get("elasticsearchScheme", "https")
+    host     = cfg.get("elasticsearchHost", "localhost")
+    port     = int(cfg.get("elasticsearchPort", 9200))
+    user     = cfg.get("elasticsearchUser", "elastic")
     password = cfg.get("elasticsearchPassword", "")
     api_key_enabled = cfg.get("elasticsearchApiKeyEnabled", False)
-    api_key_id     = cfg.get("elasticsearchApiKeyId", "")
-    api_key_secret = cfg.get("elasticsearchApiKeySecret", "")
+    api_key_id      = cfg.get("elasticsearchApiKeyId", "")
+    api_key_secret  = cfg.get("elasticsearchApiKeySecret", "")
 
     hosts = [{"host": host, "port": port, "scheme": scheme}]
 
     if api_key_enabled and api_key_id and api_key_secret:
-        client = Elasticsearch(
+        return Elasticsearch(
             hosts,
             api_key=(api_key_id, api_key_secret),
             verify_certs=cfg.get("verifyCerts", True),
             ssl_show_warn=False,
         )
-    else:
-        client = Elasticsearch(
-            hosts,
-            http_auth=(user, password),
-            verify_certs=cfg.get("verifyCerts", True),
-            ssl_show_warn=False,
-        )
-    return client
+    return Elasticsearch(
+        hosts,
+        http_auth=(user, password),
+        verify_certs=cfg.get("verifyCerts", True),
+        ssl_show_warn=False,
+    )
 
 
-def ensure_index(client: Elasticsearch, workload: Dict):
-    """Create index if it doesn't exist. Optionally purge on start."""
-    index_name = workload["indexName"]
+def ensure_index(client: Elasticsearch, workload: Dict) -> None:
+    index_name     = workload["indexName"]
     primary_shards = workload.get("primaryShardCount", 1)
     replica_shards = workload.get("replicaShardCount", 1)
-    purge = workload.get("purgeOnStart", False)
-    data_stream = workload.get("dataStream", False)
+    purge          = workload.get("purgeOnStart", False)
+    data_stream    = workload.get("dataStream", False)
 
     if purge:
         try:
             if data_stream:
-                client.indices.delete_data_stream(name=index_name, ignore_unavailable=True)
+                client.indices.delete_data_stream(name=index_name,
+                                                  ignore_unavailable=True)
             else:
                 client.indices.delete(index=index_name, ignore_unavailable=True)
-            log.info("Purged existing index/data-stream: %s", index_name)
+            log.info("Purged: %s", index_name)
         except Exception as ex:
             log.warning("Could not purge %s: %s", index_name, ex)
 
     if data_stream:
-        # Data streams are created automatically on first document
         return
 
     try:
         if not client.indices.exists(index=index_name):
-            body = {
+            client.indices.create(index=index_name, body={
                 "settings": {
                     "number_of_shards":   primary_shards,
                     "number_of_replicas": replica_shards,
                 }
-            }
-            client.indices.create(index=index_name, body=body)
+            })
             log.info("Created index: %s (shards=%d, replicas=%d)",
                      index_name, primary_shards, replica_shards)
     except Exception as ex:
@@ -616,27 +635,25 @@ def ensure_index(client: Elasticsearch, workload: Dict):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class WorkloadWorker(threading.Thread):
-    """One thread per workload (or per thread within a workload)."""
-
     def __init__(self, workload: Dict, client: Elasticsearch,
                  thread_idx: int, stop_event: threading.Event):
-        name = f"{workload.get('workloadName','workload')}-t{thread_idx}"
+        name = f"{workload.get('workloadName', 'workload')}-t{thread_idx}"
         super().__init__(name=name, daemon=True)
-        self.workload    = workload
-        self.client      = client
-        self.stop_event  = stop_event
-        self.seq_state: Dict = {}         # per-thread sequence counters
+        self.workload     = workload
+        self.client       = client
+        self.stop_event   = stop_event
+        self.seq_state: Dict = {}
         self.docs_indexed = 0
         self.errors       = 0
 
     def run(self):
-        workload    = self.workload
-        index_name  = workload["indexName"]
-        sleep_ms    = int(workload.get("workloadSleep", 1000))
-        bulk_depth  = int(workload.get("elasticsearchBulkQueueDepth", 0))
-        peak_time   = workload.get("peakTime")
-        fields      = workload.get("fields", [])
-        data_stream = workload.get("dataStream", False)
+        wl         = self.workload
+        index_name = wl["indexName"]
+        sleep_ms   = int(wl.get("workloadSleep", 1000))
+        bulk_depth = int(wl.get("elasticsearchBulkQueueDepth", 0))
+        peak_time  = wl.get("peakTime")
+        fields     = wl.get("fields", [])
+        data_stream = wl.get("dataStream", False)
 
         log.info("[%s] Starting — index=%s sleep=%dms bulk=%d",
                  self.name, index_name, sleep_ms, bulk_depth)
@@ -648,8 +665,7 @@ class WorkloadWorker(threading.Thread):
                 else:
                     self._send_single(index_name, fields, data_stream)
 
-                multiplier = _peak_multiplier(peak_time)
-                sleep_sec  = (sleep_ms * multiplier) / 1000.0
+                sleep_sec = (sleep_ms * _peak_multiplier(peak_time)) / 1000.0
                 self.stop_event.wait(timeout=sleep_sec)
 
             except ConnectionError as ex:
@@ -657,23 +673,19 @@ class WorkloadWorker(threading.Thread):
                 self.errors += 1
                 self.stop_event.wait(timeout=5)
             except Exception as ex:
-                log.error("[%s] Unexpected error: %s", self.name, ex)
+                log.error("[%s] Error: %s", self.name, ex)
                 self.errors += 1
                 self.stop_event.wait(timeout=2)
 
-        log.info("[%s] Stopped. docs_indexed=%d errors=%d",
+        log.info("[%s] Stopped. docs=%d errors=%d",
                  self.name, self.docs_indexed, self.errors)
 
     def _send_single(self, index_name, fields, data_stream):
         doc = build_document(fields, self.seq_state)
-        # Inject @timestamp if not already present
         if "@timestamp" not in doc:
             doc["@timestamp"] = datetime.now(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-        if data_stream:
-            self.client.index(index=index_name, body=doc)
-        else:
-            self.client.index(index=index_name, body=doc)
+        self.client.index(index=index_name, body=doc)
         self.docs_indexed += 1
 
     def _send_bulk(self, index_name, fields, bulk_depth, data_stream):
@@ -683,15 +695,10 @@ class WorkloadWorker(threading.Thread):
             if "@timestamp" not in doc:
                 doc["@timestamp"] = datetime.now(timezone.utc).strftime(
                     "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-            if data_stream:
-                actions.append({"_op_type": "create", "_index": index_name,
-                                 "_source": doc})
-            else:
-                actions.append({"_op_type": "index", "_index": index_name,
-                                 "_source": doc})
+            op = "create" if data_stream else "index"
+            actions.append({"_op_type": op, "_index": index_name, "_source": doc})
 
-        success, failed = helpers.bulk(self.client, actions,
-                                       raise_on_error=False)
+        success, failed = helpers.bulk(self.client, actions, raise_on_error=False)
         self.docs_indexed += success
         if failed:
             self.errors += len(failed)
@@ -699,35 +706,29 @@ class WorkloadWorker(threading.Thread):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Main entry point
+# Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Simple Data Generator (Python) — indexes random data to Elasticsearch"
+        description="Simple Data Generator (Python) — streams random data to Elasticsearch"
     )
     parser.add_argument("config", help="Path to YAML config file")
     parser.add_argument("--log-level", default="INFO",
-                        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-                        help="Logging level (default: INFO)")
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     args = parser.parse_args()
 
     logging.getLogger().setLevel(getattr(logging, args.log_level))
 
-    # Load config
-    with open(args.config, "r") as fh:
+    with open(args.config) as fh:
         cfg = yaml.safe_load(fh)
 
-    log.info("Loaded config: %s", args.config)
     log.info("Target: %s://%s:%s",
              cfg.get("elasticsearchScheme", "https"),
              cfg.get("elasticsearchHost", "localhost"),
              cfg.get("elasticsearchPort", 9200))
 
-    # Build client
     client = build_es_client(cfg)
-
-    # Verify connectivity
     try:
         info = client.info()
         log.info("Connected to Elasticsearch %s", info["version"]["number"])
@@ -741,13 +742,11 @@ def main():
         sys.exit(1)
 
     stop_event = threading.Event()
-    workers    = []
+    workers: List[WorkloadWorker] = []
 
-    # Setup indexes and spawn threads
     for workload in workloads:
         ensure_index(client, workload)
-        thread_count = int(workload.get("workloadThreads", 1))
-        for i in range(thread_count):
+        for i in range(int(workload.get("workloadThreads", 1))):
             w = WorkloadWorker(workload, client, i, stop_event)
             workers.append(w)
             w.start()
@@ -757,20 +756,18 @@ def main():
     try:
         while True:
             time.sleep(10)
-            total_docs = sum(w.docs_indexed for w in workers)
-            total_errs = sum(w.errors for w in workers)
-            log.info("Stats: docs_indexed=%d errors=%d active_threads=%d",
-                     total_docs, total_errs,
+            log.info("Stats: docs=%d errors=%d threads=%d",
+                     sum(w.docs_indexed for w in workers),
+                     sum(w.errors for w in workers),
                      sum(1 for w in workers if w.is_alive()))
     except KeyboardInterrupt:
-        log.info("Shutdown requested…")
+        log.info("Shutting down…")
         stop_event.set()
         for w in workers:
             w.join(timeout=10)
-        total_docs = sum(w.docs_indexed for w in workers)
-        total_errs = sum(w.errors for w in workers)
-        log.info("Final stats: docs_indexed=%d errors=%d", total_docs, total_errs)
-        log.info("Goodbye.")
+        log.info("Final: docs=%d errors=%d",
+                 sum(w.docs_indexed for w in workers),
+                 sum(w.errors for w in workers))
 
 
 if __name__ == "__main__":
