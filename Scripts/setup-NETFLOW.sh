@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Command to run
-CMD="java -jar /root/SDGv2/build/libs/SDGv2-1.0.0-SNAPSHOT.jar /root/SDGv2/Tracks/netflow.yml"
+CMD="python3 -m venv venv && source venv/bin/activate && pip install -r /root/SDGpy/requirements.txt && python /root/SDGpy/sdg.py /root/SDGpy/Tracks/netflow.yml"
 
 # Infinite loop
 while true; do
