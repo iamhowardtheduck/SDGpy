@@ -8,15 +8,15 @@ curl -X DELETE "http://localhost:30920/_component_template/logs-windows.sysmon_o
 #curl -X DELETE "http://localhost:30920//_data_stream/logs-windows.sysmon_operational-default" -u "sdg:changeme"
 
 # Create an updated ingest pipeline for the custom logs
-curl -X PUT "http://localhost:30920/_ingest/pipeline/logs@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/root/SDGv2/Ingest-Pipelines/logs@custom.json
+curl -X PUT "http://localhost:30920/_ingest/pipeline/logs@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/root/SDGpy/Ingest-Pipelines/logs@custom.json
 
 # Recreate them in your image
-curl -X PUT "http://localhost:30920/_component_template/logs-netflow.log@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Component-Templates/logs-netflow.log.json
-curl -X PUT "http://localhost:30920/_index_template/logs-netflow.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Index-Templates/logs-netflow.log.json
-curl -X PUT "http://localhost:30920/_component_template/logs-windows.sysmon_operational@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Component-Templates/logs-windows.sysmon-operational.json
-curl -X PUT "http://localhost:30920/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Index-Templates/logs-windows.sysmon_operational.json
-curl -X PUT "http://localhost:30920/_component_template/logs@settings" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Component-Templates/logs@settings.json
-curl -X PUT "http://localhost:30920/_index_template/logs" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGv2/Index-Templates/logs.json
+curl -X PUT "http://localhost:30920/_component_template/logs-netflow.log@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Component-Templates/logs-netflow.log.json
+curl -X PUT "http://localhost:30920/_index_template/logs-netflow.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Index-Templates/logs-netflow.log.json
+curl -X PUT "http://localhost:30920/_component_template/logs-windows.sysmon_operational@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Component-Templates/logs-windows.sysmon-operational.json
+curl -X PUT "http://localhost:30920/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Index-Templates/logs-windows.sysmon_operational.json
+curl -X PUT "http://localhost:30920/_component_template/logs@settings" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Component-Templates/logs@settings.json
+curl -X PUT "http://localhost:30920/_index_template/logs" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Index-Templates/logs.json
 
 # Create Datastream:
 curl -X PUT "http://localhost:30920/_data_stream/logs-windows.sysmon_operational-default" -H "Content-Type: application/json" -u "sdg:changeme"
