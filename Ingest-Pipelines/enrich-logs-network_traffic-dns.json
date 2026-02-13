@@ -1,0 +1,317 @@
+{
+  "processors": [
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "dnsoptudpsize",
+        "target_field": "dns.opt.udp_size"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "dnsquestionregistereddomain",
+        "target_field": "dns.question.registered_domain"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "dnsquestiontype",
+        "target_field": "dns.question.type"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "dnsanswertype",
+        "target_field": "dns.answer.type"
+      }
+    },
+    {
+      "rename": {
+        "field": "clientbytes",
+        "target_field": "source.bytes",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "client.bytes",
+        "copy_from": "source.bytes"
+      }
+    },
+    {
+      "rename": {
+        "field": "serverbytes",
+        "target_field": "destination.bytes",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "server.bytes",
+        "copy_from": "destination.bytes"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "eventduration",
+        "target_field": "event.duration"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "mlisdgamaliciousprediction",
+        "target_field": "ml_is_dga.malicious_prediction"
+      }
+    },
+    {
+      "set": {
+        "field": "dns.question.registered_domain",
+        "value": "tanki.su",
+        "if": "ctx?.domainchoice == '1'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "dns.question.registered_domain",
+        "value": "avsvmcloud.com",
+        "if": "ctx?.domainchoice == '2'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "network.protocol",
+        "value": "dns",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.question.type",
+        "value": "PTR",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.op_code",
+        "value": "QUERY",
+        "if": "ctx?.dns?.question?.type == 'A' || ctx?.dns?.question?.type == 'AAAA' "
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.question.class",
+        "value": "IN",
+        "if": "ctx?.dns?.question?.type == 'A' || ctx?.dns?.question?.type == 'AAAA' "
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.response_code",
+        "value": "NOERROR",
+        "if": "ctx?.dns?.question?.type == 'PTR' || ctx?.dns?.question?.type == 'AAAA' || ctx?.dns?.question?.type == 'A'"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.response_code",
+        "value": "NXDOMAIN",
+        "if": "ctx?.dns?.question?.type == 'TXT' || ctx?.dns?.question?.type == 'MX'"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "dns.question.name",
+        "copy_from": "dns.question.registered_domain"
+      }
+    },
+    {
+      "enrich": {
+        "ignore_failure": true,
+        "policy_name": "remote-ips",
+        "ignore_missing": true,
+        "field": "ripcodes",
+        "target_field": "rips"
+      }
+    },
+    {
+      "rename": {
+        "ignore_failure": true,
+        "ignore_missing": true,
+        "field": "rips.rip1",
+        "target_field": "rip1"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "destination.ip",
+        "value": "{{rip1}}.{{rip2}}.{{rip3}}.{{rip4}}"
+      }
+    },
+    {
+      "set": {
+        "field": "destination.ip",
+        "value": "175.45.176.73",
+        "if": "ctx.dns?.question?.registered_domain == 'tanki.su'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "source.ip",
+        "value": "{{2rip1}}.{{2rip2}}.{{2rip3}}.{{2rip4}}"
+      }
+    },
+    {
+      "set": {
+        "field": "host.name",
+        "value": "host-{{2rip1}}-{{2rip2}}-{{2rip3}}-{{2rip4}}",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "agent.name",
+        "value": "host-{{2rip1}}-{{2rip2}}-{{2rip3}}-{{2rip4}}",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "source.ip",
+        "value": "10.49.110.17",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'"
+      }
+    },
+    {
+      "set": {
+        "field": "host.name",
+        "value": "host-10-49-110-17",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "agent.name",
+        "value": "host-10-49-110-17",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "geoip": {
+        "ignore_failure": true,
+        "field": "destination.ip",
+        "target_field": "destination.geo"
+      }
+    },
+    {
+      "set": {
+        "field": "server.ip",
+        "ignore_failure": true,
+        "copy_from": "destination.ip"
+      }
+    },
+    {
+      "geoip": {
+        "ignore_failure": true,
+        "field": "source.ip",
+        "target_field": "source.geo"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "client.ip",
+        "copy_from": "source.ip"
+      }
+    },
+    {
+      "pipeline": {
+        "name": "logs-network_traffic-cleanup",
+        "ignore_missing_pipeline": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "network_traffic.dns.question.etld_plus_one",
+        "ignore_failure": true,
+        "copy_from": "dns.question.registered_domain"
+      }
+    },
+    {
+      "set": {
+        "ignore_failure": true,
+        "field": "event.ingested",
+        "copy_from": "@timestamp"
+      }
+    },
+    {
+      "fingerprint": {
+        "fields": [
+          "@timestamp"
+        ],
+        "target_field": "dnshash",
+        "method": "MD5",
+        "ignore_missing": true,
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "dns.question.name",
+        "value": "{{dnshash}}.{{dns.opt.udp_size}}_{{dns.answer.type}}-{{destination.bytes}}.{{dns.question.name}}",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '1'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "dns.question.name",
+        "value": "{{dns.opt.udp_size}}_{{dns.answer.type}}-{{destination.bytes}}.{{dns.question.name}}",
+        "if": "ctx?.ml_is_dga?.malicious_prediction == '0'",
+        "ignore_failure": true
+      }
+    },
+    {
+      "remove": {
+        "field": [
+          "dnshash",
+          "domainchoice"
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    }
+  ]
+}
