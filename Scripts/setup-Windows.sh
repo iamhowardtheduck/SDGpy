@@ -25,6 +25,7 @@ curl -X PUT "http://localhost:30920/_data_stream/logs-netflow.log-default" -H "C
 # Rollover existing index in order to inherit new settings without any garbage data
 #curl -X POST "http://localhost:30920/logs-windows.sysmon_operation-default/_rollover" -u "sdg:changeme"
 
+# Begin data generation
 python3 -m venv venv && source venv/bin/activate
 pip install -r /root/SDGpy/requirements.txt
 python /root/SDGpy/sdg.py /root/SDGpy/Tracks/saife-windows.yml
