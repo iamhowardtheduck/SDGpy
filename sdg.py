@@ -5,6 +5,8 @@ Migrated from Java (iamhowardtheduck/SDGv2)
 Generates configurable random data and indexes it into Elasticsearch.
 
 Field types match the official supported_fields.md from the original Java app.
+27 of 37 types are backed by the Faker library for richer, more realistic data.
+The remaining 10 use custom lists (domain-specific or no Faker equivalent).
 """
 
 import argparse
@@ -13,7 +15,6 @@ import ipaddress
 import logging
 import math
 import random
-import string
 import sys
 import threading
 import time
@@ -24,6 +25,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.exceptions import ConnectionError
+from faker import Faker
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
@@ -35,69 +37,22 @@ logging.basicConfig(
 )
 log = logging.getLogger("sdg")
 
+# Shared Faker instance (thread-safe for reads)
+fake = Faker()
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Static data tables
+# Custom data tables
+# Used only for types that Faker doesn't cover, or where the Java spec
+# mandates a specific dataset (e.g. ancient-gods hostnames).
 # ─────────────────────────────────────────────────────────────────────────────
-US_STATES = [
-    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
-    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
-    "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
-    "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
-    "New Hampshire", "New Jersey", "New Mexico", "New York",
-    "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
-    "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
-    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
-    "West Virginia", "Wisconsin", "Wyoming",
-]
 
-US_CITIES = [
-    "New York City", "Los Angeles", "Chicago", "Houston", "Phoenix",
-    "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
-    "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte",
-    "Indianapolis", "San Francisco", "Seattle", "Denver", "Nashville",
-    "Oklahoma City", "El Paso", "Washington", "Boston", "Memphis",
-    "Louisville", "Portland", "Las Vegas", "Baltimore", "Milwaukee",
-    "Albuquerque", "Tucson", "Fresno", "Sacramento", "Mesa",
-    "Kansas City", "Atlanta", "Omaha", "Colorado Springs", "Raleigh",
-    "Long Beach", "Virginia Beach", "Minneapolis", "Tampa", "New Orleans",
-    "Honolulu", "Arlington", "Wichita", "Cleveland", "Bakersfield",
-]
-
-STREET_NAMES = [
-    "Main St", "Oak Ave", "Maple Dr", "Cedar Blvd", "Elm St",
-    "Washington Blvd", "Park Ave", "Lake Dr", "Hill Rd", "River Rd",
-    "Forest Ln", "Sunset Blvd", "Valley Rd", "Spring St", "Meadow Ln",
-    "Lincoln Ave", "Highland Dr", "Willow Way", "Pine St", "Ridge Rd",
-]
-
-FIRST_NAMES = [
-    "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael",
-    "Linda", "William", "Barbara", "David", "Elizabeth", "Richard",
-    "Susan", "Joseph", "Jessica", "Thomas", "Sarah", "Charles", "Karen",
-    "Christopher", "Lisa", "Daniel", "Nancy", "Matthew", "Betty",
-    "Anthony", "Margaret", "Mark", "Sandra", "Donald", "Ashley",
-    "Steven", "Dorothy", "Paul", "Kimberly", "Andrew", "Emily",
-    "Kenneth", "Donna", "George", "Michelle", "Joshua", "Carol",
-    "Kevin", "Amanda", "Brian", "Melissa", "Edward", "Deborah",
-]
-
-LAST_NAMES = [
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-    "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez",
-    "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin",
-    "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark",
-    "Ramirez", "Lewis", "Robinson", "Walker", "Young", "Allen", "King",
-    "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores", "Green",
-    "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
-    "Carter", "Roberts",
-]
-
-GROUPS = [
-    "Engineering", "Sales", "Marketing", "Finance", "HR", "Legal",
-    "Operations", "Product", "Design", "Support", "Security", "IT",
-    "Research", "Executive", "Procurement", "Logistics", "Data Science",
-    "DevOps", "QA", "Business Development",
+# Ancient gods — matches the Java hostname implementation exactly
+HOSTNAMES = [
+    "zeus", "hera", "poseidon", "demeter", "athena", "apollo",
+    "artemis", "ares", "aphrodite", "hephaestus", "hermes", "dionysus",
+    "odin", "thor", "loki", "freya", "tyr", "baldur", "heimdall", "frigg",
+    "ra", "osiris", "isis", "horus", "anubis", "thoth", "set", "nut",
+    "brahma", "vishnu", "shiva", "indra", "agni", "varuna", "krishna",
 ]
 
 TEAM_NAMES = [
@@ -105,15 +60,6 @@ TEAM_NAMES = [
     "Phoenix", "Vanguard", "Titan", "Nexus", "Apex", "Zenith",
     "Hydra", "Atlas", "Orion", "Polaris", "Catalyst", "Horizon",
     "Pinnacle", "Velocity",
-]
-
-# Ancient gods — matches Java hostname implementation
-HOSTNAMES = [
-    "zeus", "hera", "poseidon", "demeter", "athena", "apollo",
-    "artemis", "ares", "aphrodite", "hephaestus", "hermes", "dionysus",
-    "odin", "thor", "loki", "freya", "tyr", "baldur", "heimdall", "frigg",
-    "ra", "osiris", "isis", "horus", "anubis", "thoth", "set", "nut",
-    "brahma", "vishnu", "shiva", "indra", "agni", "varuna", "krishna",
 ]
 
 APP_NAMES = [
@@ -129,14 +75,6 @@ PRODUCT_NAMES = [
     "LogMaster", "SecureKey", "MetricsPulse", "StreamLine", "CacheBoost",
     "QueryOptimizer", "EventBridge", "TokenGate", "AuditTrail", "PipeRunner",
     "AlertNow", "SnapIndex", "ReplicaSync", "JobQueue", "PolicyEngine",
-]
-
-OCCUPATIONS = [
-    "Software Engineer", "Data Scientist", "DevOps Engineer", "Product Manager",
-    "UX Designer", "Security Analyst", "Network Engineer", "Database Administrator",
-    "Systems Architect", "QA Engineer", "Technical Writer", "Scrum Master",
-    "Business Analyst", "Cloud Architect", "ML Engineer", "Site Reliability Engineer",
-    "IT Manager", "Solutions Architect", "Frontend Developer", "Backend Developer",
 ]
 
 GOT_CHARACTERS = [
@@ -162,50 +100,13 @@ CN_FACTS = [
     "Chuck Norris solved the halting problem. Twice.",
 ]
 
-TIMEZONES = [
-    "UTC", "America/New_York", "America/Chicago", "America/Denver",
-    "America/Los_Angeles", "America/Anchorage", "Pacific/Honolulu",
-    "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
-    "Asia/Tokyo", "Asia/Shanghai", "Asia/Kolkata", "Asia/Dubai",
-    "Australia/Sydney", "Pacific/Auckland", "America/Sao_Paulo",
-    "America/Toronto", "America/Vancouver",
-]
-
-DOMAINS = [
-    "example.com", "acme.org", "techcorp.io", "globalnet.co",
-    "infosys.net", "datahub.io", "cloudbase.tech", "webworks.com",
-    "apexdata.net", "streamline.co", "nexuslab.org", "pivotal.io",
-]
-
-PATHS = [
-    "/var/log/app.log", "/etc/nginx/nginx.conf", "/usr/local/bin/app",
-    "/home/user/documents/report.pdf", "/tmp/session_cache",
-    "/opt/services/config.yaml", "/data/exports/output.csv",
-    "/var/lib/elasticsearch/data", "/etc/ssl/certs/ca.pem",
-    "/srv/www/html/index.html", "/proc/sys/kernel/hostname",
-    "/run/app/app.pid",
-]
-
-URL_PATHS = [
-    "/", "/index.html", "/api/v1/users", "/api/v1/orders", "/api/v2/products",
-    "/search", "/login", "/logout", "/dashboard", "/admin",
-    "/static/css/main.css", "/static/js/app.js", "/favicon.ico",
-    "/api/health", "/api/metrics",
-]
-
-WORDS = [
-    "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing",
-    "elit", "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore",
-    "et", "dolore", "magna", "aliqua", "enim", "ad", "minim", "veniam",
-    "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-]
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_range(range_str: Optional[str], default_min=0, default_max=1_000_000):
+    """Parse 'min,max' range string into (min, max) tuple."""
     if not range_str:
         return default_min, default_max
     parts = str(range_str).split(",")
@@ -215,6 +116,7 @@ def _parse_range(range_str: Optional[str], default_min=0, default_max=1_000_000)
 
 
 def _parse_custom_list(field: Dict) -> List[str]:
+    """Parse custom_list: comma-separated string or YAML list."""
     raw = field.get("custom_list", "")
     if isinstance(raw, list):
         return [str(v) for v in raw]
@@ -222,196 +124,228 @@ def _parse_custom_list(field: Dict) -> List[str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Official field generators  (supported_fields.md)
+# Field generators
+# Backed by Faker where possible; custom lists for the rest.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Primitives
+# ── Primitives  (Faker) ───────────────────────────────────────────────────────
+
 def gen_int(field: Dict) -> int:
     lo, hi = _parse_range(field.get("range"), 0, 1_000_000)
-    return random.randint(int(lo), int(hi))
+    return fake.random_int(min=int(lo), max=int(hi))
+
 
 def gen_float(field: Dict) -> float:
     lo, hi = _parse_range(field.get("range"), 0.0, 1_000_000.0)
-    return round(random.uniform(lo, hi), 2)
+    return fake.pyfloat(right_digits=2, min_value=lo, max_value=hi)
+
 
 def gen_boolean(_field: Dict) -> bool:
-    return random.choice([True, False])
+    return fake.boolean()
 
-# Names
+
+# ── Names  (Faker) ────────────────────────────────────────────────────────────
+
 def gen_full_name(_field: Dict) -> str:
-    return f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+    return fake.name()
+
 
 def gen_first_name(_field: Dict) -> str:
-    return random.choice(FIRST_NAMES)
+    return fake.first_name()
+
 
 def gen_last_name(_field: Dict) -> str:
-    return random.choice(LAST_NAMES)
+    return fake.last_name()
+
 
 def gen_group(_field: Dict) -> str:
-    return random.choice(GROUPS)
+    """Department/group — Faker's bs() gives realistic business unit names."""
+    return fake.bs().title()
+
+
+# ── Names  (custom — no Faker equivalent) ────────────────────────────────────
 
 def gen_team_name(_field: Dict) -> str:
     return random.choice(TEAM_NAMES)
 
-# Addresses
+
+# ── Addresses  (Faker) ────────────────────────────────────────────────────────
+
 def gen_full_address(_field: Dict) -> str:
-    num    = random.randint(1, 9999)
-    street = random.choice(STREET_NAMES)
-    city   = random.choice(US_CITIES)
-    state  = random.choice(US_STATES)
-    zc     = f"{random.randint(10000, 99999):05d}"
-    return f"{num} {street}, {city}, {state} {zc}"
+    return fake.address()
+
 
 def gen_street_address(_field: Dict) -> str:
-    return f"{random.randint(1, 9999)} {random.choice(STREET_NAMES)}"
+    return fake.street_address()
+
 
 def gen_city(_field: Dict) -> str:
-    return random.choice(US_CITIES)
+    return fake.city()
+
 
 def gen_state(_field: Dict) -> str:
-    return random.choice(US_STATES)
+    return fake.state()
+
 
 def gen_zipcode(_field: Dict) -> str:
-    return f"{random.randint(10000, 99999):05d}"
+    return fake.zipcode()
 
-# Special numbers
+
+# ── Special numbers  (Faker) ──────────────────────────────────────────────────
+
 def gen_credit_card_number(_field: Dict) -> str:
-    """Luhn-valid 16-digit Visa test card number."""
-    prefix = [int(d) for d in random.choice(["4111", "4222", "4532", "4716"])]
-    digits = prefix[:]
-    while len(digits) < 15:
-        digits.append(random.randint(0, 9))
-    total = 0
-    for i, d in enumerate(reversed(digits)):
-        if i % 2 == 0:
-            d *= 2
-            if d > 9:
-                d -= 9
-        total += d
-    digits.append((10 - (total % 10)) % 10)
-    return "".join(str(d) for d in digits)
+    return fake.credit_card_number()
+
 
 def gen_phone_number(_field: Dict) -> str:
-    return (f"+1-{random.randint(200,999):03d}-"
-            f"{random.randint(100,999):03d}-"
-            f"{random.randint(1000,9999):04d}")
+    return fake.phone_number()
+
 
 def gen_ssn(_field: Dict) -> str:
-    return (f"{random.randint(100,999):03d}-"
-            f"{random.randint(10,99):02d}-"
-            f"{random.randint(1000,9999):04d}")
+    return fake.ssn()
+
 
 def gen_uuid(_field: Dict) -> str:
-    return str(uuid.uuid4())
+    return fake.uuid4()
+
+
+def gen_hash(_field: Dict) -> str:
+    return fake.md5()
+
+
+# ── Special numbers  (custom — no Faker equivalent) ───────────────────────────
 
 def gen_product_name(_field: Dict) -> str:
     return random.choice(PRODUCT_NAMES)
 
-def gen_hash(_field: Dict) -> str:
-    return hashlib.md5(str(random.random()).encode()).hexdigest()
 
-# Random from lists
+# ── Random from lists  (custom — inherently user-defined) ────────────────────
+
 def gen_random_string_from_list(field: Dict) -> str:
     items = _parse_custom_list(field)
     return random.choice(items) if items else ""
+
 
 def gen_random_integer_from_list(field: Dict) -> int:
     items = _parse_custom_list(field)
     return int(random.choice(items)) if items else 0
 
+
 def gen_random_float_from_list(field: Dict) -> float:
     items = _parse_custom_list(field)
     return float(random.choice(items)) if items else 0.0
+
 
 def gen_random_long_from_list(field: Dict) -> int:
     items = _parse_custom_list(field)
     return int(random.choice(items)) if items else 0
 
-# Misc
+
+# ── Misc  (Faker) ─────────────────────────────────────────────────────────────
+
 def gen_ipv4(_field: Dict) -> str:
-    while True:
-        parts = [random.randint(1, 254) for _ in range(4)]
-        if parts[0] not in (10, 127, 172, 192):
-            return ".".join(str(p) for p in parts)
+    return fake.ipv4_public()
 
-def gen_random_cn_fact(_field: Dict) -> str:
-    return random.choice(CN_FACTS)
-
-def gen_random_got_character(_field: Dict) -> str:
-    return random.choice(GOT_CHARACTERS)
 
 def gen_random_occupation(_field: Dict) -> str:
-    return random.choice(OCCUPATIONS)
+    return fake.job()
 
-def gen_empty(_field: Dict) -> str:
-    return ""
 
 def gen_path(_field: Dict) -> str:
-    return random.choice(PATHS)
+    return fake.file_path(depth=random.randint(1, 4))
+
+
+def gen_url(_field: Dict) -> str:
+    return fake.url()
+
+
+def gen_mac_address(_field: Dict) -> str:
+    return fake.mac_address()
+
+
+def gen_email(_field: Dict) -> str:
+    return fake.email()
+
+
+def gen_domain(_field: Dict) -> str:
+    return fake.domain_name()
+
+
+def gen_date(field: Dict) -> str:
+    """Date string YYYY-MM-DD. range = days back from today (min, max)."""
+    lo, hi    = _parse_range(field.get("range"), 0, 365 * 2)
+    start_dt  = datetime.now() - timedelta(days=int(hi))
+    end_dt    = datetime.now() - timedelta(days=int(lo))
+    return fake.date_between(start_date=start_dt.date(),
+                             end_date=end_dt.date()).strftime("%Y-%m-%d")
+
+
+def gen_timezone(_field: Dict) -> str:
+    return fake.timezone()
+
+
+# ── Misc  (custom — no Faker equivalent) ─────────────────────────────────────
 
 def gen_hostname(_field: Dict) -> str:
-    suffix = random.choice(["",
-                             f"-{random.randint(1, 99):02d}",
-                             f".{random.choice(['internal', 'local', 'corp'])}"])
+    """Ancient-gods themed hostname, matching the Java implementation."""
+    suffix = random.choice([
+        "",
+        f"-{random.randint(1, 99):02d}",
+        f".{random.choice(['internal', 'local', 'corp'])}",
+    ])
     return random.choice(HOSTNAMES) + suffix
+
 
 def gen_appname(_field: Dict) -> str:
     return random.choice(APP_NAMES)
 
-def gen_url(_field: Dict) -> str:
-    scheme = random.choice(["http", "https"])
-    tld    = random.choice(["com", "org", "net", "io", "co"])
-    name   = "".join(random.choices(WORDS, k=2))
-    path   = random.choice(URL_PATHS)
-    return f"{scheme}://{name}.{tld}{path}"
 
-def gen_mac_address(_field: Dict) -> str:
-    return ":".join(f"{random.randint(0,255):02x}" for _ in range(6))
+def gen_random_cn_fact(_field: Dict) -> str:
+    return random.choice(CN_FACTS)
 
-def gen_email(_field: Dict) -> str:
-    first   = random.choice(FIRST_NAMES).lower()
-    last    = random.choice(LAST_NAMES).lower()
-    domains = ["gmail.com", "yahoo.com", "hotmail.com",
-               "company.com", "example.org", "outlook.com"]
-    return f"{first}.{last}{random.randint(1,999)}@{random.choice(domains)}"
 
-def gen_domain(_field: Dict) -> str:
-    return random.choice(DOMAINS)
+def gen_random_got_character(_field: Dict) -> str:
+    return random.choice(GOT_CHARACTERS)
 
-def gen_date(field: Dict) -> str:
-    lo, hi    = _parse_range(field.get("range"), 0, 365 * 2)
-    days_back = random.randint(int(lo), int(hi))
-    dt        = datetime.now() - timedelta(days=days_back)
-    return dt.strftime("%Y-%m-%d")
 
-def gen_timezone(_field: Dict) -> str:
-    return random.choice(TIMEZONES)
+def gen_empty(_field: Dict) -> str:
+    return ""
+
+
+# ── Constants ─────────────────────────────────────────────────────────────────
 
 def gen_constant(field: Dict) -> Any:
     return field.get("value", "")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Extra types (not in official doc but useful; kept as aliases)
+# Extra / alias types  (not in official doc; kept for backwards-compat)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def gen_long(field: Dict) -> int:
     lo, hi = _parse_range(field.get("range"), 0, 9_999_999_999)
-    return random.randint(int(lo), int(hi))
+    return fake.random_int(min=int(lo), max=int(hi))
+
 
 def gen_double(field: Dict) -> float:
     lo, hi = _parse_range(field.get("range"), 0.0, 1_000_000.0)
-    return round(random.uniform(lo, hi), 6)
+    return fake.pyfloat(right_digits=6, min_value=lo, max_value=hi)
+
 
 def gen_timestamp(field: Dict) -> str:
-    """ISO-8601 UTC timestamp. range = minutes back from now."""
+    """ISO-8601 UTC timestamp. range = minutes back from now (min, max)."""
     lo, hi       = _parse_range(field.get("range"), 0, 60 * 24 * 7)
-    minutes_back = random.uniform(lo, hi)
-    dt           = datetime.now(timezone.utc) - timedelta(minutes=minutes_back)
+    start_dt     = datetime.now(timezone.utc) - timedelta(minutes=hi)
+    end_dt       = datetime.now(timezone.utc) - timedelta(minutes=lo)
+    dt           = fake.date_time_between(start_date=start_dt,
+                                          end_date=end_dt,
+                                          tzinfo=timezone.utc)
     return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
 
 def gen_ipv6(_field: Dict) -> str:
     return str(ipaddress.IPv6Address(random.randint(0, 2**128 - 1)))
+
 
 def gen_geo_point(_field: Dict) -> Dict:
     return {
@@ -419,10 +353,11 @@ def gen_geo_point(_field: Dict) -> Dict:
         "lon": round(random.uniform(-180.0, 180.0), 6),
     }
 
+
 def gen_sequence(field: Dict, state: Dict) -> int:
-    key   = field["name"]
-    start = int(field.get("start", 1))
-    step  = int(field.get("step", 1))
+    key        = field["name"]
+    start      = int(field.get("start", 1))
+    step       = int(field.get("step", 1))
     if key not in state:
         state[key] = start
     val         = state[key]
@@ -432,51 +367,56 @@ def gen_sequence(field: Dict, state: Dict) -> int:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dispatcher
-# Official names from supported_fields.md appear first.
-# Aliases / extras follow so existing configs keep working.
+# Official names (supported_fields.md) listed first; aliases follow.
 # ─────────────────────────────────────────────────────────────────────────────
 
 GENERATORS: Dict[str, Any] = {
-    # ── Official types (supported_fields.md) ──────────────────────────────
-    "int":                      gen_int,
-    "float":                    gen_float,
-    "boolean":                  gen_boolean,
-    "full_name":                gen_full_name,
-    "first_name":               gen_first_name,
-    "last_name":                gen_last_name,
-    "group":                    gen_group,
-    "team_name":                gen_team_name,
-    "full_address":             gen_full_address,
-    "street_address":           gen_street_address,
-    "city":                     gen_city,
-    "state":                    gen_state,
-    "zipcode":                  gen_zipcode,
-    "credit_card_number":       gen_credit_card_number,
-    "phone_number":             gen_phone_number,
-    "ssn":                      gen_ssn,
-    "uuid":                     gen_uuid,
-    "product_name":             gen_product_name,
-    "hash":                     gen_hash,
-    "random_string_from_list":  gen_random_string_from_list,
-    "random_integer_from_list": gen_random_integer_from_list,
-    "random_float_from_list":   gen_random_float_from_list,
-    "random_long_from_list":    gen_random_long_from_list,
-    "ipv4":                     gen_ipv4,
-    "random_cn_fact":           gen_random_cn_fact,
-    "random_got_character":     gen_random_got_character,
-    "random_occupation":        gen_random_occupation,
-    "empty":                    gen_empty,
-    "path":                     gen_path,
-    "hostname":                 gen_hostname,
-    "appname":                  gen_appname,
-    "url":                      gen_url,
-    "mac_address":              gen_mac_address,
-    "email":                    gen_email,
-    "domain":                   gen_domain,
-    "date":                     gen_date,
-    "timezone":                 gen_timezone,
+    # ── Official types (supported_fields.md) ─────────────────────────────
+    # Primitives
+    "int":                      gen_int,            # Faker
+    "float":                    gen_float,          # Faker
+    "boolean":                  gen_boolean,        # Faker
+    # Names
+    "full_name":                gen_full_name,      # Faker
+    "first_name":               gen_first_name,     # Faker
+    "last_name":                gen_last_name,      # Faker
+    "group":                    gen_group,          # Faker (bs())
+    "team_name":                gen_team_name,      # custom
+    # Addresses
+    "full_address":             gen_full_address,   # Faker
+    "street_address":           gen_street_address, # Faker
+    "city":                     gen_city,           # Faker
+    "state":                    gen_state,          # Faker
+    "zipcode":                  gen_zipcode,        # Faker
+    # Special numbers
+    "credit_card_number":       gen_credit_card_number, # Faker
+    "phone_number":             gen_phone_number,   # Faker
+    "ssn":                      gen_ssn,            # Faker
+    "uuid":                     gen_uuid,           # Faker
+    "product_name":             gen_product_name,   # custom
+    "hash":                     gen_hash,           # Faker (md5)
+    # Random from lists
+    "random_string_from_list":  gen_random_string_from_list,  # custom
+    "random_integer_from_list": gen_random_integer_from_list, # custom
+    "random_float_from_list":   gen_random_float_from_list,   # custom
+    "random_long_from_list":    gen_random_long_from_list,    # custom
+    # Misc
+    "ipv4":                     gen_ipv4,               # Faker (public)
+    "random_cn_fact":           gen_random_cn_fact,     # custom
+    "random_got_character":     gen_random_got_character, # custom
+    "random_occupation":        gen_random_occupation,  # Faker (job)
+    "empty":                    gen_empty,              # trivial
+    "path":                     gen_path,               # Faker
+    "hostname":                 gen_hostname,           # custom (ancient gods)
+    "appname":                  gen_appname,            # custom
+    "url":                      gen_url,                # Faker
+    "mac_address":              gen_mac_address,        # Faker
+    "email":                    gen_email,              # Faker
+    "domain":                   gen_domain,             # Faker
+    "date":                     gen_date,               # Faker
+    "timezone":                 gen_timezone,           # Faker
 
-    # ── Aliases / extras ──────────────────────────────────────────────────
+    # ── Aliases / extras ─────────────────────────────────────────────────
     "integer":                  gen_int,
     "long":                     gen_long,
     "double":                   gen_double,
@@ -503,11 +443,12 @@ GENERATORS: Dict[str, Any] = {
 
 
 def generate_value(field: Dict, state: Optional[Dict] = None) -> Any:
-    # Constants: 'value' key present, no 'type' key (as per supported_fields.md)
+    # Constants: 'value' key present, no 'type' key (supported_fields.md spec)
     if "value" in field and "type" not in field:
         return field["value"]
 
     field_type = field.get("type", "")
+
     if field_type == "sequence":
         if state is None:
             state = {}
@@ -523,11 +464,12 @@ def generate_value(field: Dict, state: Optional[Dict] = None) -> Any:
 
 
 def build_document(fields: List[Dict], seq_state: Dict) -> Dict:
+    """Build a full document dict from a list of field definitions."""
     doc: Dict = {}
     for field in fields:
         key   = field["name"]
         value = generate_value(field, seq_state)
-        # Dot-notation → nested dict  e.g. "name.first" → {"name": {"first": ...}}
+        # Dot-notation → nested dict  e.g. "name.first" → {"name": {"first": …}}
         if "." in key:
             parts     = key.split(".")
             container = doc
@@ -553,12 +495,12 @@ def _peak_multiplier(peak_time_str: Optional[str]) -> float:
         return 1.0
     try:
         peak_h, peak_m, peak_s = map(int, str(peak_time_str).split(":"))
-        now          = datetime.now()
-        peak_sec     = peak_h * 3600 + peak_m * 60 + peak_s
-        now_sec      = now.hour * 3600 + now.minute * 60 + now.second
-        diff         = abs(now_sec - peak_sec)
-        diff         = min(diff, 86400 - diff)
-        fraction     = diff / 43200.0
+        now      = datetime.now()
+        peak_sec = peak_h * 3600 + peak_m * 60 + peak_s
+        now_sec  = now.hour * 3600 + now.minute * 60 + now.second
+        diff     = abs(now_sec - peak_sec)
+        diff     = min(diff, 86400 - diff)
+        fraction = diff / 43200.0
         return 0.5 + 1.5 * math.sin(fraction * math.pi / 2) ** 2
     except Exception:
         return 1.0
@@ -647,12 +589,12 @@ class WorkloadWorker(threading.Thread):
         self.errors       = 0
 
     def run(self):
-        wl         = self.workload
-        index_name = wl["indexName"]
-        sleep_ms   = int(wl.get("workloadSleep", 1000))
-        bulk_depth = int(wl.get("elasticsearchBulkQueueDepth", 0))
-        peak_time  = wl.get("peakTime")
-        fields     = wl.get("fields", [])
+        wl          = self.workload
+        index_name  = wl["indexName"]
+        sleep_ms    = int(wl.get("workloadSleep", 1000))
+        bulk_depth  = int(wl.get("elasticsearchBulkQueueDepth", 0))
+        peak_time   = wl.get("peakTime")
+        fields      = wl.get("fields", [])
         data_stream = wl.get("dataStream", False)
 
         log.info("[%s] Starting — index=%s sleep=%dms bulk=%d",
@@ -663,7 +605,7 @@ class WorkloadWorker(threading.Thread):
                 if bulk_depth > 0:
                     self._send_bulk(index_name, fields, bulk_depth, data_stream)
                 else:
-                    self._send_single(index_name, fields, data_stream)
+                    self._send_single(index_name, fields)
 
                 sleep_sec = (sleep_ms * _peak_multiplier(peak_time)) / 1000.0
                 self.stop_event.wait(timeout=sleep_sec)
@@ -680,24 +622,24 @@ class WorkloadWorker(threading.Thread):
         log.info("[%s] Stopped. docs=%d errors=%d",
                  self.name, self.docs_indexed, self.errors)
 
-    def _send_single(self, index_name, fields, data_stream):
+    def _make_doc(self, fields):
         doc = build_document(fields, self.seq_state)
         if "@timestamp" not in doc:
             doc["@timestamp"] = datetime.now(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-        self.client.index(index=index_name, body=doc)
+        return doc
+
+    def _send_single(self, index_name, fields):
+        self.client.index(index=index_name, body=self._make_doc(fields))
         self.docs_indexed += 1
 
     def _send_bulk(self, index_name, fields, bulk_depth, data_stream):
-        actions = []
-        for _ in range(bulk_depth):
-            doc = build_document(fields, self.seq_state)
-            if "@timestamp" not in doc:
-                doc["@timestamp"] = datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-            op = "create" if data_stream else "index"
-            actions.append({"_op_type": op, "_index": index_name, "_source": doc})
-
+        op      = "create" if data_stream else "index"
+        actions = [
+            {"_op_type": op, "_index": index_name,
+             "_source": self._make_doc(fields)}
+            for _ in range(bulk_depth)
+        ]
         success, failed = helpers.bulk(self.client, actions, raise_on_error=False)
         self.docs_indexed += success
         if failed:
