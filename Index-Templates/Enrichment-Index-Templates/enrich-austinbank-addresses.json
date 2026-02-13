@@ -1,0 +1,43 @@
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "Address": {
+          "type": "keyword"
+        },
+        "Name": {
+          "type": "keyword"
+        },
+        "Routing_Number": {
+          "type": "keyword"
+        },
+        "SWIFT": {
+          "type": "keyword"
+        },
+        "addressId": {
+          "type": "keyword"
+        },
+        "txbankId": {
+          "type": "keyword",
+          "index": true,
+          "eager_global_ordinals": false,
+          "norms": false,
+          "split_queries_on_whitespace": false,
+          "doc_values": true,
+          "store": false,
+          "index_options": "docs"
+        }
+      }
+    },
+    "settings": {
+      "index": {
+        "mode": "lookup"
+      }
+    }
+  },
+  "index_patterns": [
+    "enrich-austinbank-addresses*"
+  ],
+  "composed_of": [],
+  "ignore_missing_component_templates": []
+}
