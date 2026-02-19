@@ -695,21 +695,31 @@ def main():
 
     log.info("Started %d worker thread(s). Press Ctrl+C to stop.", len(workers))
 
+    # Clear screen and display assignment message
+    import os
+    def clear_and_display():
+        os.system('clear' if os.name == 'posix' else 'cls')
+        print("\n\n")
+        print("=" * 60)
+        print("  You are now ready to begin the assignment.")
+        print("=" * 60)
+        print(f"\n  Workers running: {len(workers)}")
+        print(f"  Documents indexed: {sum(w.docs_indexed for w in workers):,}")
+        print(f"  Errors: {sum(w.errors for w in workers)}")
+        print("\n  Press Ctrl+C to stop.\n")
+
     try:
+        clear_and_display()
         while True:
-            time.sleep(10)
-            log.info("Stats: docs=%d errors=%d threads=%d",
-                     sum(w.docs_indexed for w in workers),
-                     sum(w.errors for w in workers),
-                     sum(1 for w in workers if w.is_alive()))
+            time.sleep(5)
+            clear_and_display()
     except KeyboardInterrupt:
-        log.info("Shutting down…")
+        print("\n\nShutting down…")
         stop_event.set()
         for w in workers:
             w.join(timeout=10)
-        log.info("Final: docs=%d errors=%d",
-                 sum(w.docs_indexed for w in workers),
-                 sum(w.errors for w in workers))
+        print(f"Final: {sum(w.docs_indexed for w in workers):,} documents indexed, "
+              f"{sum(w.errors for w in workers)} errors")
 
 
 if __name__ == "__main__":
