@@ -37,6 +37,10 @@ logging.basicConfig(
 )
 log = logging.getLogger("sdg")
 
+# Suppress Elasticsearch HTTP request logs
+logging.getLogger("elasticsearch").setLevel(logging.WARNING)
+logging.getLogger("elastic_transport").setLevel(logging.WARNING)
+
 # Shared Faker instance (thread-safe for reads)
 fake = Faker()
 
@@ -579,7 +583,8 @@ def ensure_index(client: Elasticsearch, workload: Dict) -> None:
 class WorkloadWorker(threading.Thread):
     def __init__(self, workload: Dict, client: Elasticsearch,
                  thread_idx: int, stop_event: threading.Event):
-        name = f"{workload.get('workloadName', 'workload')}-t{thread_idx}"
+        # Use indexName directly (no -t# suffix)
+        name = workload.get("indexName", "workload")
         super().__init__(name=name, daemon=True)
         self.workload     = workload
         self.client       = client
@@ -596,9 +601,6 @@ class WorkloadWorker(threading.Thread):
         peak_time   = wl.get("peakTime")
         fields      = wl.get("fields", [])
         data_stream = wl.get("dataStream", False)
-
-        log.info("[%s] Starting — index=%s sleep=%dms bulk=%d",
-                 self.name, index_name, sleep_ms, bulk_depth)
 
         while not self.stop_event.is_set():
             try:
@@ -618,9 +620,6 @@ class WorkloadWorker(threading.Thread):
                 log.error("[%s] Error: %s", self.name, ex)
                 self.errors += 1
                 self.stop_event.wait(timeout=2)
-
-        log.info("[%s] Stopped. docs=%d errors=%d",
-                 self.name, self.docs_indexed, self.errors)
 
     def _make_doc(self, fields):
         doc = build_document(fields, self.seq_state)
@@ -692,8 +691,6 @@ def main():
             w = WorkloadWorker(workload, client, i, stop_event)
             workers.append(w)
             w.start()
-
-    log.info("Started %d worker thread(s). Press Ctrl+C to stop.", len(workers))
 
     # Clear screen and display assignment message
     import os
