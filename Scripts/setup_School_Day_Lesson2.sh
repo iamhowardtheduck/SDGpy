@@ -35,4 +35,4 @@ curl -X PUT "http://localhost:30920/_index_template/logs-windows.sysmon_operatio
 # Begin data generation
 python3 -m venv venv && source venv/bin/activate
 pip install -r /root/SDGpy/requirements.txt
-python /root/SDGpy/sdg.py /root/SDGpy/Tracks/schoolday_all_lesson2.yml
+python3 /root/SDGpy/sdg.py /root/SDGpy/Tracks/schoolday_all_lesson2.yml
