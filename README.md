@@ -24,12 +24,12 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-python sdg.py your_config.yml
+python3 sdg.py your_config.yml
 ```
 
 With debug logging:
 ```bash
-python sdg.py your_config.yml --log-level DEBUG
+python3 sdg.py your_config.yml --log-level DEBUG
 ```
 
 ---
