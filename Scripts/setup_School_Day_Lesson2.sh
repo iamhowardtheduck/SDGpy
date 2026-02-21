@@ -14,7 +14,7 @@ curl -X DELETE "http://localhost:30920/_component_template/logs-netflow.log@pack
 
 
 # Create an updated ingest pipeline for the custom logs
-curl -X PUT "http://localhost:30920/_ingest/pipeline/logs@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/root/SDGv2/Ingest-Pipelines/logs@custom.json
+curl -X PUT "http://localhost:30920/_ingest/pipeline/logs@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/root/SDGpy/Ingest-Pipelines/logs@custom.json
 
 # Recreate them in your image
 curl -X PUT "http://localhost:30920/_component_template/logs@settings" -H "Content-Type: application/json" -u "sdg:changeme" -d @/root/SDGpy/Component-Templates/logs@settings.json
