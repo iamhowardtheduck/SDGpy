@@ -25,29 +25,6 @@ curl -X POST "http://localhost:30920/_security/user/sdg" -H "Content-Type: appli
 }'
 
 
-# Install Git
-sudo apt update -y
-# Install Java
-sudo apt install -y git default-jre
-
-# Verify Java installation
-java_version=$(java -version 2>&1 | head -n 1)
-echo "Java installed: $java_version"
-
-# Install Gradle
-sudo apt install -y gradle
-
-# Verify Gradle installation
-gradle_version=$(gradle -v | grep "Gradle " | awk '{print $2}')
-echo "Gradle installed: Version $gradle_version"
-
-# Install Simple-Data-Generator
-cd /root/SDGpy && gradle clean; gradle build fatJar
-
-echo
-echo "Simple Data Generator installed"
-echo
-
 # Install LLM Connector
 bash /opt/workshops/elastic-llm.sh -k false -m claude-sonnet-4 -d true
 
