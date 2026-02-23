@@ -26,11 +26,11 @@ curl -X POST "http://localhost:30920/_security/user/sdg" -H "Content-Type: appli
 
 # Install LLM Connector
 #bash /opt/workshops/elastic-llm.sh -k false -m claude-sonnet-4 -d true
-bash /opt/workshops/elastic-llm.sh -k false -m gpt-4.1 -d true
+bash /opt/workshops/elastic-llm.sh -k false -m claude-sonnet-4 -d true
 
 echo
 #echo "AWS Bedrock AI Assistant Connector configured as OpenAI"
-echo "AI Assistant Connector configured as GPT-4.1"
+echo "AI Assistant Connector configured as Claude 4.0"
 echo
 
 echo "Loading pre-built Elastic Security rules..."
