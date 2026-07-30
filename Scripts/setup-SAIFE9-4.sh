@@ -52,7 +52,7 @@ curl -X POST "http://localhost:30920/_security/user/sdg" -H "Content-Type: appli
 
 
 # Install LLM Connector
-bash /opt/workshops/elastic-llm.sh -m gpt-5.5 -k true -d true 
+bash /opt/workshops/elastic-llm.sh -m gpt-5.5 -k false -d true 
 
 echo
 echo "OpenAI Connector configured"
