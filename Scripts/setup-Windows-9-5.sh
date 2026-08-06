@@ -28,4 +28,4 @@ curl -X PUT "https://es.elastic.lab:443/_data_stream/logs-netflow.log-default" -
 # Begin data generation
 python3 -m venv venv && source venv/bin/activate
 pip install -r /home/elastic/SDGpy/requirements.txt
-python3 /home/elastic/SDGpy/sdg.py /home/elastic/SDGpy/Tracks/saife-windows.yml
+python3 /home/elastic/SDGpy/sdg.py /home/elastic/SDGpy/Tracks/saife95-windows.yml
