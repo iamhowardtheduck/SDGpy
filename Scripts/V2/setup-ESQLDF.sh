@@ -1,5 +1,5 @@
 # Install Security Labs Content
-curl -u sdg:changeme -X POST "https://kb.elastic.lab:443/internal/product_doc_base/install" -H "kbn-xsrf: true" -H "x-elastic-internal-origin: Kibana" -H "Content-Type: application/json" -d '{"resourceType":"security_labs"}'
+#curl -u sdg:changeme -X POST "https://kb.elastic.lab:443/internal/product_doc_base/install" -H "kbn-xsrf: true" -H "x-elastic-internal-origin: Kibana" -H "Content-Type: application/json" -d '{"resourceType":"security_labs"}'
 
 # Use Security view
 #bash /opt/workshops/elastic-view.sh -v security
@@ -314,5 +314,9 @@ curl -X PUT "https://es.elastic.lab:443/_index_template/logs-windows.sysmon_oper
 
 clear
 
-echo
+clear
+echo ""
+echo ""
 echo "You are now ready to begin the assignment."
+echo ""
+echo ""
