@@ -2,26 +2,26 @@
 curl -u sdg:changeme -X POST "https://kb.elastic.lab:443/internal/product_doc_base/install" -H "kbn-xsrf: true" -H "x-elastic-internal-origin: Kibana" -H "Content-Type: application/json" -d '{"resourceType":"security_labs"}'
 
 # Use Security view
-bash /opt/workshops/elastic-view.sh -v security
+#bash /opt/workshops/elastic-view.sh -v security
 
-echo
-echo "Security centric Kibana view applied"
-echo
+#echo
+#echo "Security centric Kibana view applied"
+#echo
 
 # Create Elastic-Agent policies
-curl -X POST "https://kb.elastic.lab:443/api/fleet/agent_policies?sys_monitoring=true" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Agent-Policies/Infra.json
-curl -X POST "https://kb.elastic.lab:443/api/fleet/agent_policies?sys_monitoring=true" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Agent-Policies/SecOps.json
+#curl -X POST "https://kb.elastic.lab:443/api/fleet/agent_policies?sys_monitoring=true" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Agent-Policies/Infra.json
+#curl -X POST "https://kb.elastic.lab:443/api/fleet/agent_policies?sys_monitoring=true" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Agent-Policies/SecOps.json
 
-echo
-echo "Elastic-Agent policies Infrastructure & SecOps created"
-echo
+#echo
+#echo "Elastic-Agent policies Infrastructure & SecOps created"
+#echo
 
 # Create Entity Asset lists
-curl -X POST "https://kb.elastic.lab:443/api/asset_criticality/bulk" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Entity-Asset-List/entities-v1.json
+#curl -X POST "https://kb.elastic.lab:443/api/asset_criticality/bulk" --header "kbn-xsrf: true"  -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Entity-Asset-List/entities-v1.json
 
-echo
-echo "Entity Asset list loaded"
-echo
+#echo
+#echo "Entity Asset list loaded"
+#echo
 
 # Load index templates for enrichment data
 curl -X POST "https://es.elastic.lab:443/_index_template/enrich-bluecoat" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-bluecoat.json
@@ -299,18 +299,18 @@ curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs@custom" -H "Conten
 
 # Recreate them in your image
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs@settings" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs@settings.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-network_traffic.dns@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-network_traffic.dns.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-network_traffic.dns" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-network_traffic.dns.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-network_traffic.dns" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-network_traffic.dns.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-proxysg.log@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-proxysg.log.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-proxysg.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-proxysg.log.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-proxysg.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-proxysg.log.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-ti_abusech.malware@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-ti_abusech.malware.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-ti_abusech.malware" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-ti_abusech.malware.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-email.filter" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-email.filter.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-ti_abusech.malware" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-ti_abusech.malware.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-email.filter" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-email.filter.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-netflow.log@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-netflow.log.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-netflow.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-netflow.log.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-netflow.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-netflow.log.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-windows.sysmon_operational@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-windows.sysmon-operational.json
-curl -X PUT "https://es.elastic.lab:443/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-windows.sysmon_operational.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-windows.sysmon_operational.json
 
 clear
 
