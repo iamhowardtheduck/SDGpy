@@ -24,11 +24,11 @@ curl -u sdg:changeme -X POST "https://kb.elastic.lab:443/internal/product_doc_ba
 #echo
 
 # Load index templates for enrichment data
-curl -X POST "https://es.elastic.lab:443/_index_template/enrich-bluecoat" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-bluecoat.json
-curl -X POST "https://es.elastic.lab:443/_index_template/enrich-nginx" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-nginx.json
-curl -X POST "https://es.elastic.lab:443/_index_template/enrich-rip" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-rip.json
-curl -X POST "https://es.elastic.lab:443/_index_template/enrich-user_agents" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-user_agents.json
-curl -X POST "https://es.elastic.lab:443/_index_template/enrich-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/enrich-windows.sysmon_operational.json
+curl -X POST "https://es.elastic.lab:443/_index_template/enrich-bluecoat" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/V2/enrich-bluecoat.json
+curl -X POST "https://es.elastic.lab:443/_index_template/enrich-nginx" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/V2/enrich-nginx.json
+curl -X POST "https://es.elastic.lab:443/_index_template/enrich-rip" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/V2/enrich-rip.json
+curl -X POST "https://es.elastic.lab:443/_index_template/enrich-user_agents" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/V2/enrich-user_agents.json
+curl -X POST "https://es.elastic.lab:443/_index_template/enrich-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/Enrichment-Index-Templates/V2/enrich-windows.sysmon_operational.json
 
 echo
 echo "Enrichment index templates loaded"
