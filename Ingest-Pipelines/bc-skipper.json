@@ -1,0 +1,13 @@
+{
+  "field_access_pattern": "classic",
+  "processors": [
+    {
+      "pipeline": {
+        "name": "logs-proxysg.log",
+        "ignore_missing_pipeline": true,
+        "ignore_failure": true,
+        "if": "ctx.rip1 != null || ctx.proxcode != null"
+      }
+    }
+  ]
+}
