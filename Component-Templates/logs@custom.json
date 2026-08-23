@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "template": {
+    "lifecycle": {
+      "enabled": true
+    },
+    "mappings": {
+      "properties": {
+        "enriched": {
+          "type": "object",
+          "properties": {
+            "First_Name": {
+              "type": "keyword"
+            },
+            "Last_Name": {
+              "type": "keyword"
+            },
+            "Department": {
+              "type": "keyword"
+            },
+            "Sub_Department": {
+              "type": "keyword"
+            },
+            "Start_Date": {
+              "type": "date"
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "number_of_replicas": 1
+    }
+  }
+}
