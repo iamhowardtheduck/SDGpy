@@ -311,6 +311,7 @@ curl -X PUT "https://es.elastic.lab:443/_component_template/logs-netflow.log@pac
 curl -X PUT "https://es.elastic.lab:443/_index_template/logs-netflow.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-netflow.log.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-windows.sysmon_operational@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-windows.sysmon-operational.json
 curl -X PUT "https://es.elastic.lab:443/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-windows.sysmon_operational.json
+curl -X PUT "https://es.elastic.lab:443/_component_template/logs@custom" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs@custom.json
 
 clear
 
