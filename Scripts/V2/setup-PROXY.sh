@@ -5,6 +5,7 @@ curl -X DELETE "https://es.elastic.lab:443/_component_template/logs-proxysg.log@
 # Recreate them in your image
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs-proxysg.log@package" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs-proxysg.log.json
 curl -X PUT "https://es.elastic.lab:443/_index_template/logs-proxysg.log" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/logs-proxysg.log.json
+curl -X PUT "https://es.elastic.lab:443/_component_template/logs@custom" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs@custom.json
 
 # Begin data generation
 # Begin data generation
