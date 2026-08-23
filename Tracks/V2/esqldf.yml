@@ -240,7 +240,7 @@ workloads:
 
       - name: 2rip4
         type: int
-        range: 0,254
+        range: 1,254
 
       - name: 2rip1a
         type: int
@@ -545,11 +545,11 @@ workloads:
 
       - name: 2rip3
         type: int
-        range: 110,110
+        range: 0,127
 
       - name: 2rip4
         type: int
-        range: 0,100
+        range: 1,254
 
       - name: processpename
         type: path        
@@ -646,11 +646,11 @@ workloads:
 
       - name: 2rip3
         type: int
-        range: 110,110
+        range: 0,127
 
       - name: 2rip4
         type: int
-        range: 17,17
+        range: 1,254
 
       - name: networkdirection
         type: random_string_from_list
