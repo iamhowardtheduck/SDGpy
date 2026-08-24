@@ -4,7 +4,7 @@
     "settings": {
       "index": {
 		"mode": "logsdb",  
-        "default_pipeline": "enrich-email",
+        "default_pipeline": "logs-email.filter",
         "number_of_replicas": 1
       }
     },
