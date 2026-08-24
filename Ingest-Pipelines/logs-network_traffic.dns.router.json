@@ -1,0 +1,13 @@
+{
+  "field_access_pattern": "classic",
+  "processors": [
+    {
+      "pipeline": {
+        "name": "enrich-logs-network_traffic",
+        "ignore_missing_pipeline": true,
+        "ignore_failure": true,
+        "if": "ctx['datastreamdataset'] != null || ctx['dnsquestionregistereddomain'] != null"
+      }
+    }
+  ]
+}
