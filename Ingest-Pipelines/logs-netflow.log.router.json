@@ -6,7 +6,7 @@
         "name": "logs-netflow.log",
         "ignore_missing_pipeline": true,
         "ignore_failure": true,
-        "if": "ctx.2rip1 != null || ctx.rip1 != null"
+        "if": "ctx['2rip1'] != null || ctx['rip1'] != null"
       }
     }
   ]
