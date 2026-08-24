@@ -84,6 +84,7 @@ curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log" -H "C
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.router.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-netflow.log" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-netflow.log.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-netflow.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-netflow.log.router.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-network_traffic.dns.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-network_traffic.dns.router.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-email.filter" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-email.filter.json
 
 
