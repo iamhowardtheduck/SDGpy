@@ -4,7 +4,7 @@
       "index": {
         "mode": "logsdb",
         "number_of_replicas": "1",
-        "default_pipeline": "logs-windows.sysmon_operational"
+        "default_pipeline": "logs-windows.sysmon_operational.router"
       }
     },
     "mappings": {
