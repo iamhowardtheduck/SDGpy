@@ -69,6 +69,7 @@ echo
 
 # Creat ingest pipelines
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-windows.sysmon_operational" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-windows.sysmon_operational.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-windows.sysmon_operational.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-windows.sysmon_operational.router.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-ti_abusech.malware@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-ti_abusech.malware@custom.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/email-filter-rules" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/email-filter-rules.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/enrich-bluecoat" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/enrich-bluecoat.json
@@ -81,8 +82,10 @@ curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/nginx-cleanup" -H "Cont
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/timestamp-cleanup" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/timestamp-cleanup.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.router.json
-curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-email.filter" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-email.filter.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-netflow.log" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-netflow.log.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-netflow.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-netflow.log.router.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-email.filter" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-email.filter.json
+
 
 echo
 echo "Custom Ingest Pipelines loaded"
