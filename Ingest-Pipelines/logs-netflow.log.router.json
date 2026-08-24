@@ -1,0 +1,13 @@
+{
+  "field_access_pattern": "classic",
+  "processors": [
+    {
+      "pipeline": {
+        "name": "logs-netflow.log",
+        "ignore_missing_pipeline": true,
+        "ignore_failure": true,
+        "if": "ctx.2rip1 != null || ctx.rip1 != null"
+      }
+    }
+  ]
+}
