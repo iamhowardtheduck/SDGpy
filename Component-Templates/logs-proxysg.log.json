@@ -5,7 +5,7 @@
         "lifecycle": {
           "name": "logs"
         },
-        "default_pipeline": "logs-proxysg.log",
+        "default_pipeline": "logs-proxysg.log.router",
         "mapping": {
           "total_fields": {
             "limit": "1000"
