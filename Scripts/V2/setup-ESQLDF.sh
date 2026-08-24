@@ -80,7 +80,8 @@ curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-network_traffic-cl
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/nginx-cleanup" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/nginx-cleanup.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/timestamp-cleanup" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/timestamp-cleanup.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.json
-curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/bc-skipper" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/bc-skipper.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.router.json
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-proxysg.log.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-proxysg.log.router.json
 
 echo
 echo "Custom Ingest Pipelines loaded"
