@@ -11,4 +11,4 @@ fi
 
 python3 -m venv venv && source venv/bin/activate
 pip install -r /home/elastic/SDGpy/requirements.txt
-python3 /home/elastic/SDGpy/sdg.py /home/elastic/SDGpy/Tracks/V2/esqldf-V2.yml
+python3 /home/elastic/SDGpy/Scripts/V2/ESQLDF/sdg.py /home/elastic/SDGpy/Tracks/V2/esqldf-V2.yml
