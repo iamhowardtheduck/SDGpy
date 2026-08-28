@@ -68,6 +68,7 @@ echo "Enrichment policies executed"
 echo
 
 # Creat ingest pipelines
+curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/geoip" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/geoip.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-windows.sysmon_operational" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-windows.sysmon_operational.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-windows.sysmon_operational.router" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-windows.sysmon_operational.router.json
 curl -X PUT "https://es.elastic.lab:443/_ingest/pipeline/logs-ti_abusech.malware@custom" -H "Content-Type: application/x-ndjson" -u "sdg:changeme" -d @/home/elastic/SDGpy/Ingest-Pipelines/logs-ti_abusech.malware@custom.json
