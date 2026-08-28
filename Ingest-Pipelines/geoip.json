@@ -1,0 +1,42 @@
+{
+  "processors": [
+   {
+      "geoip": {
+        "field": "destination.ip",
+        "target_field": "destination.geo",
+        "ignore_failure": true
+      }
+    },
+    {
+      "geoip": {
+        "field": "destination.ip",
+        "target_field": "destination.asn",
+        "database_file": "GeoLite2-ASN.mmdb",
+        "ignore_failure": true
+      }
+    },
+    {
+      "geoip": {
+        "field": "source.ip",
+        "target_field": "source.geo",
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "destination.as.asn",
+        "target_field": "destination.as.number",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "destination.as.organization_name",
+        "target_field": "destination.as.organization.name",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    }
+  ]
+}
