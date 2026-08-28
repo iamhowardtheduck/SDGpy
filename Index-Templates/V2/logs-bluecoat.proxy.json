@@ -89,6 +89,26 @@
           },
           "subobjects": true
         },
+		"enriched": {
+          "type": "object",
+          "properties": {
+            "First_Name": {
+              "type": "keyword"
+            },
+            "Last_Name": {
+              "type": "keyword"
+            },
+            "Department": {
+              "type": "keyword"
+            },
+            "Team": {
+              "type": "keyword"
+            },
+            "Employee_ID": {
+              "type": "keyword"
+            }
+          }
+        },  
         "destination": {
           "type": "object",
           "properties": {
