@@ -37,6 +37,14 @@
         "ignore_missing": true,
         "ignore_failure": true
       }
+    },
+    {
+      "set": {
+        "field": "_id",
+        "ignore_empty_value": true,
+        "ignore_failure": true,
+        "copy_from": "_id"
+      }
     }
   ]
 }
