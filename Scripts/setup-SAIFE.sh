@@ -32,6 +32,10 @@
 #echo "Anthropic Connector configured as gpt5-connector"
 #echo
 
+python3 -m venv .venv
+source .venv/bin/activate
+pip install pandas numpy elasticsearch faker pyarrow
+
 # Use Security view
 bash /opt/workshops/elastic-view.sh -v security
 
