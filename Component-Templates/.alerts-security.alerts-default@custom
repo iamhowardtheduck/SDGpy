@@ -1,0 +1,37 @@
+{
+  "template": {
+    "lifecycle": {
+      "enabled": true
+    },
+    "mappings": {
+      "properties": {
+        "enriched": {
+          "type": "object",
+          "properties": {
+            "First_Name": {
+              "type": "keyword"
+            },
+            "Department": {
+              "type": "keyword"
+            },
+            "Last_Name": {
+              "type": "keyword"
+            },
+            "Employee_ID": {
+              "type": "long"
+            },
+            "Team": {
+              "type": "keyword"
+            },
+            "Start_Date": {
+              "type": "date"
+            },
+            "IP_Address": {
+              "type": "ip"
+            }
+          }
+        }
+      }
+    }
+  }
+}
