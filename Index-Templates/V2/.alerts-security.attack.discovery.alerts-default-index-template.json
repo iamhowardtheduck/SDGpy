@@ -1,0 +1,50 @@
+{
+  "priority": 7,
+  "template": {
+    "mappings": {
+      "_meta": {
+        "managed": true,
+        "namespace": "default",
+        "kibana": {
+          "version": "9.5.4"
+        }
+      },
+      "dynamic": false
+    },
+    "settings": {
+      "index": {
+        "lifecycle": {
+          "name": ".alerts-ilm-policy",
+          "rollover_alias": ".alerts-security.attack.discovery.alerts-default"
+        },
+        "hidden": "true",
+        "auto_expand_replicas": "0-1",
+        "mapping": {
+          "total_fields": {
+            "limit": "2800",
+            "ignore_dynamic_beyond_limit": "true"
+          },
+          "ignore_malformed": "true"
+        }
+      }
+    }
+  },
+  "index_patterns": [
+    ".internal.alerts-security.attack.discovery.alerts-default-*",
+    ".reindexed-v8-internal.alerts-security.attack.discovery.alerts-default-*"
+  ],
+  "composed_of": [
+    ".alerts-ecs-mappings",
+    ".alerts-security.attack.discovery.alerts-mappings",
+    ".alerts-framework-mappings",
+    ".alerts-security.alerts-default@custom"
+  ],
+  "ignore_missing_component_templates": [],
+  "_meta": {
+    "managed": true,
+    "namespace": "default",
+    "kibana": {
+      "version": "9.5.4"
+    }
+  }
+}
