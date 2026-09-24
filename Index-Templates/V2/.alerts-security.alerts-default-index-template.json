@@ -1,0 +1,56 @@
+{
+  "priority": 7,
+  "template": {
+    "aliases": {
+      ".siem-signals-default": {
+        "is_write_index": false
+      }
+    },
+    "mappings": {
+      "_meta": {
+        "managed": true,
+        "namespace": "default",
+        "kibana": {
+          "version": "9.5.4"
+        }
+      },
+      "dynamic": false
+    },
+    "settings": {
+      "index": {
+        "lifecycle": {
+          "name": ".alerts-ilm-policy",
+          "rollover_alias": ".alerts-security.alerts-default"
+        },
+        "hidden": "true",
+        "auto_expand_replicas": "0-1",
+        "mapping": {
+          "total_fields": {
+            "limit": "2800",
+            "ignore_dynamic_beyond_limit": "true"
+          },
+          "ignore_malformed": "true"
+        }
+      }
+    }
+  },
+  "index_patterns": [
+    ".internal.alerts-security.alerts-default-*",
+    ".reindexed-v8-internal.alerts-security.alerts-default-*"
+  ],
+  "composed_of": [
+    ".alerts-ecs-mappings",
+    ".alerts-security.alerts-mappings",
+    ".alerts-legacy-alert-mappings",
+    ".alerts-framework-mappings",
+    ".alerts-security.alerts-default@custom"
+  ],
+  "ignore_missing_component_templates": [],
+  "_meta": {
+    "namespace": "default",
+    "kibana": {
+      "version": "9.5.4"
+    },
+    "managed": true
+  }
+}
