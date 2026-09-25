@@ -322,6 +322,9 @@ curl -X PUT "https://es.elastic.lab:443/_component_template/logs-windows.sysmon_
 curl -X PUT "https://es.elastic.lab:443/_index_template/logs-windows.sysmon_operational" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs-windows.sysmon_operational.json
 curl -X PUT "https://es.elastic.lab:443/_index_template/logs_on_double_secret_probation" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/logs_on_double_secret_probation.json
 curl -X PUT "https://es.elastic.lab:443/_component_template/logs@custom" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/logs@custom.json
+curl -X PUT "https://es.elastic.lab:443/_component_template/.alerts-security.alerts-default@custom" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Component-Templates/.alerts-security.alerts-default@custom.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/.alerts-security.attack.discovery.alerts-default-index-template" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/.alerts-security.attack.discovery.alerts-default-index-template.json
+curl -X PUT "https://es.elastic.lab:443/_index_template/.alerts-security.alerts-default-index-template" -H "Content-Type: application/json" -u "sdg:changeme" -d @/home/elastic/SDGpy/Index-Templates/V2/.alerts-security.alerts-default-index-template.json
 
 clear
 
